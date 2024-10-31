@@ -11,7 +11,15 @@ import numpy as np
 import os, sys
 import glob
 from Bio import SeqIO # pip install biopython
-#import config.py
+
+# local imports
+# Add the directory containing config.py and functions.py to the Python path
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+sys.path.append('/home/tanu/git/arise_proteome')
+from config import *  # imports config.py as a module
+from functions import *  # imports functions.py as a module
+
 ###############################################################################
 #============
 # Stage 1: Create proteome dict
