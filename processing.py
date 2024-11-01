@@ -33,6 +33,14 @@ proteomeD = {}
 # Find all .fa files in the directory
 fa_files = glob(os.path.join(proteome_indir, "*.fa"))
 
+# Print the number of files
+print(f"Number of .fa files found: {len(fa_files)}")
+
+# List each file and its size
+for file in fa_files:
+    file_size = os.path.getsize(file)  # Size in bytes
+    print(f"File: {os.path.basename(file)}, Size: {file_size / (1024 * 1024):.2f} MB")
+
 # Loop through each file and read the sequences
 #for file in fa_files:
 #    print(f"Reading file: {file}")
@@ -80,11 +88,14 @@ start_time_stage2 = time.time()
 
 print("\nReading protein cluster file:", protein_cluster_infile)
 #protein_cluster_file = pd.read_csv(protein_cluster_infile, sep='\t', header=None)
-# tscv file has no headers, so giving it names
+
+# tsv file has no headers, so giving it names
 pclustersDF = pd.read_csv(protein_cluster_infile
                           , sep ='\t'
                           , usecols = [0,1], names=['protein1_id', 'protein2_id'])
 
+print(pclustersDF.shape)
+#TODO: room for optimisation
 #pclustersDF['protein1_id'].value_counts() # may be some optimisation can be done here!
 #pclustersDF['protein2_id'].value_counts()
 print("\n No. of unique protein_ids in the two columns:\n", pclustersDF.nunique())

@@ -30,8 +30,8 @@ print("\nReading proteome file from:", proteome_indir)
 
 ## results files: .tsv
 results_indir = source_dir + "/results_pig"
-#protein_cluster_infile = results_indir + "/Specie_protein_cluster.tsv" 
-protein_cluster_infile = results_indir + "/sample_Specie_protein_cluster.tsv"
+protein_cluster_infile = results_indir + "/Specie_protein_cluster.tsv" 
+#protein_cluster_infile = results_indir + "/sample_Specie_protein_cluster.tsv"
 
 #outdir = results_indir
 ###############################################################################
