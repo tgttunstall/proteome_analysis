@@ -1,5 +1,7 @@
-# Task is to add the proteom ID to the file containsing protein clusters so we know for which proteome the protein belongs to
+# Task is to add the proteom ID to the file containing protein clusters 
+
 ## Overview of the files:
+
 ### proteome fasta
 For the pig data, there are about 14 files in the proteome dir, each containing about 50-60k proteins beginning with ">":
 
