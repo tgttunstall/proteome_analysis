@@ -64,7 +64,7 @@ end_time = time.time()
 elapsed_time_s1 = end_time - start_time
 
 print(f"Dictionary creation completed in {elapsed_time_s1 // 3600:.0f} hours, "
-      f"{(elapsed_time_s1 % 3600) // 60:.0f} minutes, and {elapsed_time % 60:.2f} seconds.")
+      f"{(elapsed_time_s1 % 3600) // 60:.0f} minutes, and {elapsed_time_s1 % 60:.2f} seconds.")
 
 # Print sample dictionary content to confirm entries
 print("Sample dictionary entries:", list(proteomeD.items())[627950:627957])
@@ -129,3 +129,18 @@ print(f"writing file: {updated_clusterDF}\nDim of df: {pclustersDF.shape}")
 
 pclustersDF.to_csv(updated_clusterDF, sep='\t', index=False)
 print(f"Updated file saved as {updated_clusterDF}")
+
+# ISSUE: 
+#ENSSSCP00040031975
+
+#grep -r ENSSSCP00040031975 *.fa
+#proteome_4698268.fa:>ENSSSCP00040031975|188
+#proteome_4698920.fa:>ENSSSCP00040031975|188
+#proteome_4698921.fa:>ENSSSCP00040031975|188
+#proteome_4698924.fa:>ENSSSCP00040031975|188
+
+#grep -r ENSSSCP00015020973 *.fa
+#proteome_4698268.fa:>ENSSSCP00015020973|188
+#proteome_4698920.fa:>ENSSSCP00015020973|188
+#proteome_4698921.fa:>ENSSSCP00015020973|188
+#proteome_4698924.fa:>ENSSSCP00015020973|188
