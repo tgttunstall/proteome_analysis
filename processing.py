@@ -130,8 +130,8 @@ print(f"writing file: {updated_clusterDF}\nDim of df: {pclustersDF.shape}")
 pclustersDF.to_csv(updated_clusterDF, sep='\t', index=False)
 print(f"Updated file saved as {updated_clusterDF}")
 
-# ISSUE: 
-#ENSSSCP00040031975
+# FIXME: assumed, that each protein belongs to a unique proteome!
+# ISSUE: one to many mapping b/w protein and proteome
 
 #grep -r ENSSSCP00040031975 *.fa
 #proteome_4698268.fa:>ENSSSCP00040031975|188
