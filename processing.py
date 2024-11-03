@@ -9,7 +9,8 @@ import time
 import pandas as pd
 import numpy as np
 import os, sys
-import glob
+from glob import glob
+from tqdm import tqdm
 from Bio import SeqIO # pip install biopython
 
 # local imports
@@ -21,70 +22,59 @@ from config import *  # imports config.py as a module
 from functions import *  # imports functions.py as a module
 
 ###############################################################################
+# Reversing to the new structure:
+#protein_to_proteome = {}
+
+#for proteome_id, proteins in proteomeD.items():
+#    for protein in proteins:
+#        protein_to_proteome[protein] = proteome_id
+#627957        
 #============
 # Stage 1: Create proteome dict
 #============
 # Start the timer
-start_time_stage1 = time.time()
+start_time = time.time()
 
-# Initialise the dictionary:
+# Directory containing .fa files
+print(f"\nReading files from {proteome_indir}")
+
+# Initialize the protein-to-proteome dictionary as proteomeD
 proteomeD = {}
 
-# Find all .fa files in the directory
+# Find all .fa files
 fa_files = glob(os.path.join(proteome_indir, "*.fa"))
 
-# Print the number of files
+# Check if files were found
 print(f"Number of .fa files found: {len(fa_files)}")
+if len(fa_files) == 0:
+    print("No .fa files found. Please check the directory path.")
 
-# List each file and its size
-for file in fa_files:
-    file_size = os.path.getsize(file)  # Size in bytes
-    print(f"File: {os.path.basename(file)}, Size: {file_size / (1024 * 1024):.2f} MB")
-
-# Loop through each file and read the sequences
-#for file in fa_files:
-#    print(f"Reading file: {file}")
-    #for record in SeqIO.parse(file, "fasta"):
-    #    print(f"ID: {record.id}")
-    #    print(f"Sequence: {record.seq[:50]}...")  # Display first 50 bases only    
-    
-# process each fasta file where you extract the proteome ID from the filename which is the key
-# and all corresponding fasta headers as list values
-
-for file in fa_files:
-    #print(f"Reading file: {file}")
-    
-    # extract proteome_id without the file extension
+# Populate proteomeD directly from the .fa files with progress tracking
+for file in tqdm(fa_files, desc="Processing .fa files"):
+    # Extract proteome ID from the filename (e.g., "proteome_35497" from "proteome_35497.fa")
     proteome_id = os.path.splitext(os.path.basename(file))[0]
-    
-    # get the headers from the fasta file and store in a list
-    pfasta_headers = [record.id for record in SeqIO.parse(file,"fasta")]
-    
-    # add the headers list to the proteome_id key in the dict
-    proteomeD[proteome_id] = pfasta_headers
-    
-# Print proteome ID and the length of the list of headers for each key
-#for proteome_id, pfasta_headers in proteomeD.items():
-#    print(f"{proteome_id}: {len(pfasta_headers)}")
+
+    # Read each protein entry in the .fa file and add it to proteomeD
+    for record in SeqIO.parse(file, "fasta"):
+        print(f"Processing protein: {record.id} in {proteome_id}")  # Debugging output
+        proteomeD[record.id] = proteome_id
 
 # End the timer and calculate elapsed time
-end_time_stage1 = time.time()
-elapsed_time_stage1 = end_time_stage1 - start_time_stage1
+end_time = time.time()
+elapsed_time_s1 = end_time - start_time
 
-print(f"Mapping completed in {elapsed_time_stage1:.2f} seconds.")
+print(f"Dictionary creation completed in {elapsed_time_s1 // 3600:.0f} hours, "
+      f"{(elapsed_time_s1 % 3600) // 60:.0f} minutes, and {elapsed_time % 60:.2f} seconds.")
 
-# Convert to hours, minutes, and seconds
-hours_s1 = int(elapsed_time_stage1 // 3600)
-minutes_s1 = int((elapsed_time_stage1 % 3600) // 60)
-seconds_s1 = elapsed_time_stage1 % 60
-print(f"Mapping completed in {hours_s1} hours, {minutes_s1} minutes, and {seconds_s1:.2f} seconds.")
-###############################################################################    
+# Print sample dictionary content to confirm entries
+print("Sample dictionary entries:", list(proteomeD.items())[627950:627957])
+
 #============
 # Stage 2: assign proteom id to protein names
 #find_proteome_id()
 #============
 # Start the timer
-start_time_stage2 = time.time()
+start_time = time.time()
 
 print("\nReading protein cluster file:", protein_cluster_infile)
 #protein_cluster_file = pd.read_csv(protein_cluster_infile, sep='\t', header=None)
@@ -99,36 +89,35 @@ print(pclustersDF.shape)
 #pclustersDF['protein1_id'].value_counts() # may be some optimisation can be done here!
 #pclustersDF['protein2_id'].value_counts()
 print("\n No. of unique protein_ids in the two columns:\n", pclustersDF.nunique())
+check1 = pclustersDF.groupby('protein1_id').count()
 
 
-# Apply the function find_proteome_id to the 2 columns of the tsv file:
-## adding proteome id to column: 'protein1_id
-#pclusters['protein1_id_proteome'] = pclusters['protein1_id'].apply(lamda name: f"{find_proteome_id(name, proteomeD)}_{name}" if find_proteome_id(name, proteomeD) else name)
+# Start timing
+#start_time = time.time()
 
-pclustersDF['protein1_id_proteome'] = pclustersDF['protein1_id'].apply(
-    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}" 
-    if find_proteome_id(name, proteomeD) 
-    else name
+# Apply the function to `protein2_id` column with progress tracking
+tqdm.pandas(desc="Mapping protein2_id to proteome ID")
+
+## Adding proteome id to columns: 
+
+# FIXME: Adding to column: 'protein1_id'
+pclustersDF['protein1_id_proteome'] = pclustersDF['protein1_id'].progress_apply(
+    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}"
 )
 
-## adding proteome id to column: 'protein2_id'
-pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].apply(
-    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}" 
-    if find_proteome_id(name, proteomeD) 
-    else name
+# Adding to column: 'protein2_id'
+pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
+    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}"
 )
 
-# End the timer and calculate elapsed time
-end_time_stage2 = time.time()
-elapsed_time_stage2 = end_time_stage2 - start_time_stage2
+# End timing
+end_time = time.time()
+elapsed_time_s2 = end_time - start_time
 
-print(f"Mapping completed in {elapsed_time_stage2:.2f} seconds.")
-
-# Convert to hours, minutes, and seconds
-hours_s2 = int(elapsed_time_stage2 // 3600)
-minutes_s2 = int((elapsed_time_stage2 % 3600) // 60)
-seconds_s2 = elapsed_time_stage2 % 60
-print(f"Mapping completed in {hours_s2} hours, {minutes_s2} minutes, and {seconds_s2:.2f} seconds.")
+# Output results
+print(f"Mapping completed in {elapsed_time_s2 // 3600:.0f} hours, "
+      f"{(elapsed_time_s2 % 3600) // 60:.0f} minutes, and {elapsed_time_s2 % 60:.2f} seconds.")
+print("Sample mapped entries:", pclustersDF[['protein2_id', 'protein2_id_proteome']].head())
 
 ###############################################################################
 #=========================
