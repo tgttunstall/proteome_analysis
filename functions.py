@@ -14,7 +14,7 @@ from tqdm import tqdm
 # proteomeD = {"ENSSSCP00000055324|661": "proteome_35497", ...}
 
 # Sample data - assuming you've loaded your TSV data into a DataFrame `pclusters`
-# pclusters = pd.read_csv("protein_cluster.tsv", sep="\t")
+# pclustersDF = pd.read_csv("protein_cluster.tsv", sep="\t")
 
 # Simplified function to look up the proteome ID
 def find_proteome_id(protein_name, proteomeDict):
@@ -24,6 +24,10 @@ def find_proteome_id(protein_name, proteomeDict):
     """
     return proteomeDict.get(protein_name, "XXX")
 
+#     if protein_name in proteomeDict:
+#         proteomeDict[protein_name] += f"_{proteome_id}"
+#     else:
+#         proteomeDict[protein_name] = proteome_id
 
 ###############################################################################
 # # Attempt 1

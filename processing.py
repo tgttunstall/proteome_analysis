@@ -12,6 +12,7 @@ import os, sys
 from glob import glob
 from tqdm import tqdm
 from Bio import SeqIO # pip install biopython
+import pprint as pp
 
 # local imports
 # Add the directory containing config.py and functions.py to the Python path
@@ -58,8 +59,21 @@ for file in tqdm(fa_files, desc="Processing .fa files"):
 
     # Read each protein entry in the .fa file and add it to proteomeD
     for record in SeqIO.parse(file, "fasta"):
-        print(f"Processing protein: {record.id} in {proteome_id}")  # Debugging output
-        proteomeD[record.id] = proteome_id
+        #print(f"Processing protein: {record.id} in {proteome_id}")  # Debugging output
+        print(f"Processing protein: {record.id}")
+
+        #proteomeD[record.id] = proteome_id
+        # if record.id in proteomeD:
+        #     proteomeD[record.id] += f"_{proteome_id}"
+        # else:
+        #     proteomeD[record.id] = proteome_id
+
+        if not record.id in proteomeD:
+            proteomeD[record.id] = proteome_id        
+        else:     
+            proteomeD[record.id] += f"_{proteome_id}"
+
+print(proteomeD['ENSSSCP00015020973|188'])
 
 # End the timer and calculate elapsed time
 end_time = time.time()
@@ -69,7 +83,11 @@ print(f"Dictionary creation completed in {elapsed_time_s1 // 3600:.0f} hours, "
       f"{(elapsed_time_s1 % 3600) // 60:.0f} minutes, and {elapsed_time_s1 % 60:.2f} seconds.")
 
 # Print sample dictionary content to confirm entries
-print("Sample dictionary entries:", list(proteomeD.items())[627950:627957])
+#print("Sample dictionary entries:", list(proteomeD.items())[627950:627957])
+#print("Sample dictionary entries:", list(proteomeD.items())[:5])
+
+print("Sample dictionary entries:")
+pp.pprint(list(proteomeD.items())[:5])
 
 #============
 # Stage 2: assign proteome id to protein names
