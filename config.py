@@ -5,13 +5,13 @@ Created on Thu Oct 31 12:15:23 2024
 
 @author: tanu
 """
-import time
-import pandas as pd
-import numpy as np
-import os, sys
-from glob import glob
-from tqdm import tqdm
-from Bio import SeqIO # pip install biopython
+#import time
+#import pandas as pd
+#import numpy as np
+#import os, sys
+#from glob import glob
+#from tqdm import tqdm
+#from Bio import SeqIO # pip install biopython
 
 ###############################################################################
 #===============
@@ -22,7 +22,9 @@ from Bio import SeqIO # pip install biopython
 #==================
 # home data store
 #==================
-source_dir = "/home/pub/Work/data_arise_proteome"
+#source_dir = "/home/pub/Work/data_arise_proteome"
+source_dir = "/home/tunstall/Documents/arise/data_arise_proteome"
+
 
 # pig proteome file
 ## all .fa files

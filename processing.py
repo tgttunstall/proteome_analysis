@@ -17,7 +17,9 @@ from Bio import SeqIO # pip install biopython
 # Add the directory containing config.py and functions.py to the Python path
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-sys.path.append('/home/tanu/git/arise_proteome')
+#sys.path.append('/home/tanu/git/arise_proteome')
+sys.path.append('/home/tunstall/git/arise_proteome')
+
 from config import *  # imports config.py as a module
 from functions import *  # imports functions.py as a module
 
@@ -70,7 +72,7 @@ print(f"Dictionary creation completed in {elapsed_time_s1 // 3600:.0f} hours, "
 print("Sample dictionary entries:", list(proteomeD.items())[627950:627957])
 
 #============
-# Stage 2: assign proteom id to protein names
+# Stage 2: assign proteome id to protein names
 #find_proteome_id()
 #============
 # Start the timer
