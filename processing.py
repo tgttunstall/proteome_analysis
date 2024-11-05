@@ -139,7 +139,7 @@ print(f"Mapping completed in {elapsed_time_s2 // 3600:.0f} hours, "
       f"{(elapsed_time_s2 % 3600) // 60:.0f} minutes, and {elapsed_time_s2 % 60:.2f} seconds.")
 print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'protein2_id', 'representative', 'protein2_id_proteome']].head())
 
-b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_proteome'].str.contains("ENSSSCP00040031975"))]
+#b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_proteome'].str.contains("ENSSSCP00040031975"))]
 ###############################################################################
 #=========================
 # writing the updated file
