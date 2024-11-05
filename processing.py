@@ -46,6 +46,8 @@ from functions import *  # imports functions.py as a module
 #============
 # Stage 1: Create proteome dict
 #============
+#TODO: track memory usage
+
 # Start the timer
 start_time = time.time()
 
@@ -71,13 +73,7 @@ for file in tqdm(fa_files, desc="Processing .fa files"):
     # Read each protein entry in the .fa file and add it to proteomeD
     for record in SeqIO.parse(file, "fasta"):
         #print(f"Processing protein: {record.id} in {proteome_id}")  # Debugging output
-        
-        #proteomeD[record.id] = proteome_id
-        # if record.id in proteomeD:
-        #     proteomeD[record.id] += f"_{proteome_id}"
-        # else:
-        #     proteomeD[record.id] = proteome_id
-
+       
         if record.id not in proteomeD:
             proteomeD[record.id] = proteome_id        
         else:     
@@ -126,7 +122,8 @@ pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
     #lambda name: f"{find_proteome_id(name, proteomeD)}_{name}")
     lambda name: f"{find_proteome_id(name, proteomeD)}")
 
-# # without function:
+# TODO: compare time with and without function:
+# without function:
 # pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
 #     lambda name: f"{proteomeD.get(name, 'XXX')}_{name}")
 #    lambda name: f"{find_proteome_id(name, proteomeD)}")
@@ -148,8 +145,7 @@ b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_p
 
 ###############################################################################
 # Measure memory usage and call the function
-file_path = protein_cluster_infile  # Replace with your file path
-mem_usage = memory_usage((read_large_tsv, (file_path,)), interval=1, timeout=None)
+mem_usage = memory_usage((read_large_tsv, (protein_cluster_infile,)), interval=1, timeout=None)
 
 # Report memory usage
 print(f"Peak memory usage: {max(mem_usage):.2f} MB")
@@ -162,7 +158,7 @@ print(f"Peak memory usage: {max(mem_usage):.2f} MB")
 output_clusterDF_file = results_indir + '/species_protein_cluster_with_proteomes_v3.tsv'
 cols_to_output = ['cluster_id', 
                   #'protein1_id', 
-                  'protein2_id', 
+                  #'protein2_id', 
                   'representative', 
                   'protein2_id_proteome']
 
@@ -171,8 +167,7 @@ pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
 print(f"Updated file saved as {output_clusterDF_file}")
 
 ###############################################################################
-# FIXME: assumed, that each protein belongs to a unique proteome!
-# ISSUE: one to many mapping b/w protein and proteome
+# CHECK: one to many mapping b/w protein and proteome
 
 #grep -r ENSSSCP00040031975 *.fa
 #proteome_4698268.fa:>ENSSSCP00040031975|188
