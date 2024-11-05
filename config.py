@@ -14,17 +14,17 @@ Created on Thu Oct 31 12:15:23 2024
 #from Bio import SeqIO # pip install biopython
 
 ###############################################################################
-#===============
-# work cluster
-#===============
+#==================
+# data store
+#==================
+# ebi-cluster
 #source_dir = "nfs/production/martin/uniprot/users/insana/proteomescomparison"
 
-#==================
-# home data store
-#==================
+# home
 #source_dir = "/home/pub/Work/data_arise_proteome"
-source_dir = "/home/tunstall/Documents/arise/data_arise_proteome"
 
+# ebi-local machine
+source_dir = "/home/tunstall/Documents/arise/data_arise_proteome"
 
 # pig proteome file
 ## all .fa files
