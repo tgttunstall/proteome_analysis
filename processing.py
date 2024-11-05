@@ -33,15 +33,12 @@ sys.path.append('/home/tanu/git/arise_proteome')
 ###############################################################################
 from config import *  # imports config.py as a module
 from functions import *  # imports functions.py as a module
-
 ###############################################################################
-# Reversing to the new structure:
-#protein_to_proteome = {}
+# Directories and files based on arguments
+proteome_indir = args.fasta_dir
+protein_cluster_infile = args.tsv_file
+output_file = args.outfile
 
-#for proteome_id, proteins in proteomeD.items():
-#    for protein in proteins:
-#        protein_to_proteome[protein] = proteome_id
-#627957        
 #============
 # Stage 1: Create proteome dict
 #============
@@ -145,16 +142,16 @@ print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'prote
 # writing the updated file
 #=========================
 # Save the updated DataFrame with proteome ID added
-output_clusterDF_file = results_indir + '/species_protein_cluster_with_proteomes.tsv'
+#output_clusterDF_file ='/species_protein_cluster_with_proteomes.tsv'
 cols_to_output = ['cluster_id', 
                   #'protein1_id', 
                   #'protein2_id', 
                   'representative', 
                   'protein2_id_proteome']
 
-print(f"writing file: {output_clusterDF_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
-pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
-print(f"Updated file saved as {output_clusterDF_file}")
+print(f"writing file: {output_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
+pclustersDF[cols_to_output].to_csv(output_file, sep='\t', index=True)
+print(f"Updated file saved as {output_file}")
 
 ##############################################################################
 #TODO: just a start, need to apply this to each stage preferrably
