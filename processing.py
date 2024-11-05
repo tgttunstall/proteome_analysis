@@ -14,6 +14,9 @@ from tqdm import tqdm
 from Bio import SeqIO # pip install biopython
 import pprint as pp
 
+# Enable tqdm for pandas
+tqdm.pandas()
+
 # local imports
 # Add the directory containing config.py and functions.py to the Python path
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -74,7 +77,7 @@ for file in tqdm(fa_files, desc="Processing .fa files"):
         # else:
         #     proteomeD[record.id] = proteome_id
 
-        if not record.id in proteomeD:
+        if record.id not in proteomeD:
             proteomeD[record.id] = proteome_id        
         else:     
             proteomeD[record.id] += f"_{proteome_id}"
@@ -168,8 +171,16 @@ pclustersDF.loc[pclustersDF.duplicated('protein1_id', keep='first') == False, 'r
 
 # Step 3: Add 'protein2_id_proteome' column
 pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
-    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}")
+    #lambda name: f"{find_proteome_id(name, proteomeD)}_{name}")
+    lambda name: f"{find_proteome_id(name, proteomeD)}")
 
+
+# # without function:
+# pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
+#     lambda name: f"{proteomeD.get(name, 'XXX')}_{name}"
+#    lambda name: f"{find_proteome_id(name, proteomeD)}")
+
+# )
 
 # Sort the DataFrame by 'cluster_id' in ascending order without resetting the index
 pclustersDF = pclustersDF.sort_values(by='cluster_id')
@@ -183,11 +194,7 @@ print(f"Mapping completed in {elapsed_time_s2 // 3600:.0f} hours, "
       f"{(elapsed_time_s2 % 3600) // 60:.0f} minutes, and {elapsed_time_s2 % 60:.2f} seconds.")
 print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'protein2_id', 'representative', 'protein2_id_proteome']].head())
 
-# Save to a new TSV file with the specified format
-output_file = "output_clusters.tsv"
-pclustersDF[['cluster_id', 'protein1_id', 'protein2_id', 'representative', 'protein2_id_proteome']].to_csv(output_file, sep='\t', index=False)
-
-###############################################################################
+##############################################################################
 #=========================
 # writing the updated file
 #=========================
@@ -199,7 +206,7 @@ cols_to_output = ['cluster_id',
                   'representative', 
                   'protein2_id_proteome']
 
-print(f"writing file: {updated_clusterDF}\nDim of df: {pclustersDF[cols_to_output].shape}")
+print(f"writing file: {output_clusterDF_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
 #pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
 print(f"Updated file saved as {output_clusterDF_file}")
 
