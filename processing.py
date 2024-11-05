@@ -30,7 +30,6 @@ sys.path.append('/home/tanu/git/arise_proteome')
 
 # ebi-cluster
 
-
 ###############################################################################
 from config import *  # imports config.py as a module
 from functions import *  # imports functions.py as a module
@@ -141,15 +140,6 @@ print(f"Mapping completed in {elapsed_time_s2 // 3600:.0f} hours, "
 print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'protein2_id', 'representative', 'protein2_id_proteome']].head())
 
 b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_proteome'].str.contains("ENSSSCP00040031975"))]
-
-
-###############################################################################
-# Measure memory usage and call the function
-mem_usage = memory_usage((read_large_tsv, (protein_cluster_infile,)), interval=1, timeout=None)
-
-# Report memory usage
-print(f"Peak memory usage: {max(mem_usage):.2f} MB")
-
 ###############################################################################
 #=========================
 # writing the updated file
@@ -165,6 +155,14 @@ cols_to_output = ['cluster_id',
 print(f"writing file: {output_clusterDF_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
 pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
 print(f"Updated file saved as {output_clusterDF_file}")
+
+##############################################################################
+#TODO: just a start, need to apply this to each stage preferrably
+# Measure memory usage and call the function
+mem_usage = memory_usage((read_large_tsv, (protein_cluster_infile,)), interval=1, timeout=None)
+
+# Report memory usage
+print(f"Peak memory usage: {max(mem_usage):.2f} MB")
 
 ###############################################################################
 # CHECK: one to many mapping b/w protein and proteome
