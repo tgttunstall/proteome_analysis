@@ -18,9 +18,16 @@ import pprint as pp
 # Add the directory containing config.py and functions.py to the Python path
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-#sys.path.append('/home/tanu/git/arise_proteome')
-sys.path.append('/home/tunstall/git/arise_proteome')
+# home
+sys.path.append('/home/tanu/git/arise_proteome')
 
+# ebi-local
+#sys.path.append('/home/tunstall/git/arise_proteome')
+
+# ebi-cluster
+
+
+###############################################################################
 from config import *  # imports config.py as a module
 from functions import *  # imports functions.py as a module
 
@@ -161,8 +168,7 @@ pclustersDF.loc[pclustersDF.duplicated('protein1_id', keep='first') == False, 'r
 
 # Step 3: Add 'protein2_id_proteome' column
 pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
-    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}"
-)
+    lambda name: f"{find_proteome_id(name, proteomeD)}_{name}")
 
 
 # Sort the DataFrame by 'cluster_id' in ascending order without resetting the index
