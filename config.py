@@ -14,7 +14,6 @@ Created on Thu Oct 31 12:15:23 2024
 #from Bio import SeqIO # pip install biopython
 
 ###############################################################################
-#TODO: Add cmd args
 #==================
 # source dir
 #==================
