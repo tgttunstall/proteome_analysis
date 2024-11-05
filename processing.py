@@ -103,7 +103,6 @@ pp.pprint(list(proteomeD.items())[:5])
 # Stage 2: assign proteome id to protein names
 #find_proteome_id()
 #============
-
 # Read in the TSV file with protein pairs
 pclustersDF_original = pd.read_csv(protein_cluster_infile, sep='\t', usecols=[0, 1], names=['protein1_id', 'protein2_id'])
 
@@ -143,33 +142,18 @@ print(f"Mapping completed in {elapsed_time_s2 // 3600:.0f} hours, "
       f"{(elapsed_time_s2 % 3600) // 60:.0f} minutes, and {elapsed_time_s2 % 60:.2f} seconds.")
 print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'protein2_id', 'representative', 'protein2_id_proteome']].head())
 
-
-#a  = pclustersDF.iloc[[680512,680513]]
-
 b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_proteome'].str.contains("ENSSSCP00040031975"))]
 
-pclustersDF.shape
 
-fd_diff = pclustersDF.shape[0] - len(proteomeD)
-print(f"\nDiff between tsv file and dict length: {fd_diff} \
-      \nLength of TSV file: {pclustersDF.shape[0]} \
-      \nLength of proteomeD: {len(proteomeD)}")
+###############################################################################
+# Measure memory usage and call the function
+file_path = protein_cluster_infile  # Replace with your file path
+mem_usage = memory_usage((read_large_tsv, (file_path,)), interval=1, timeout=None)
 
+# Report memory usage
+print(f"Peak memory usage: {max(mem_usage):.2f} MB")
 
-duplicateRowsDF = pclustersDF[pclustersDF.duplicated()]
-print(f"\nDuplicated rows in pclustersDF: {duplicateRowsDF.shape[0]}")
-
-predicted_nunique_entries = pclustersDF.shape[0] - duplicateRowsDF.shape[0]
-print(f"\nPredicted no. of unique entries:{predicted_nunique_entries}")
-
-pclustersDF_unique = pclustersDF.drop_duplicates()
-print(f"\nLength of DF of unique entries:{len(pclustersDF_unique)}")
-
-#TODO
-# add sanity check here
-
-
-##############################################################################
+###############################################################################
 #=========================
 # writing the updated file
 #=========================
