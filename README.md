@@ -1,4 +1,4 @@
-# Task is to add the proteom ID to the file containing protein clusters 
+# Task is to add the proteome ID to the file containing protein clusters 
 
 ## Overview of the files:
 
