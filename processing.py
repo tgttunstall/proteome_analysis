@@ -13,6 +13,7 @@ from glob import glob
 from tqdm import tqdm
 from Bio import SeqIO # pip install biopython
 import pprint as pp
+from memory_profiler import memory_usage #pip install ,update yml?
 
 # Enable tqdm for pandas
 tqdm.pandas()
