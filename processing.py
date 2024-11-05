@@ -145,7 +145,7 @@ b = pclustersDF[(pclustersDF['cluster_id'] == 301) & (pclustersDF['protein2_id_p
 # writing the updated file
 #=========================
 # Save the updated DataFrame with proteome ID added
-output_clusterDF_file = results_indir + '/species_protein_cluster_with_proteomes_v3.tsv'
+output_clusterDF_file = results_indir + '/species_protein_cluster_with_proteomes.tsv'
 cols_to_output = ['cluster_id', 
                   #'protein1_id', 
                   #'protein2_id', 
@@ -162,7 +162,7 @@ print(f"Updated file saved as {output_clusterDF_file}")
 mem_usage = memory_usage((read_large_tsv, (protein_cluster_infile,)), interval=1, timeout=None)
 
 # Report memory usage
-print(f"Peak memory usage: {max(mem_usage):.2f} MB")
+print(f"Peak memory usage to read TSV file: {max(mem_usage):.2f} MB")
 
 ###############################################################################
 # CHECK: one to many mapping b/w protein and proteome
