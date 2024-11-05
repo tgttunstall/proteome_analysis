@@ -104,9 +104,10 @@ pp.pprint(list(proteomeD.items())[:5])
 #find_proteome_id()
 #============
 # Read in the TSV file with protein pairs
-pclustersDF_original = pd.read_csv(protein_cluster_infile, sep='\t', usecols=[0, 1], names=['protein1_id', 'protein2_id'])
+pclustersDF = pd.read_csv(protein_cluster_infile, sep='\t', usecols=[0, 1], names=['protein1_id', 'protein2_id'])
 
-pclustersDF = pclustersDF_original.drop_duplicates()
+# Added to just work on the unique entires
+pclustersDF = pclustersDF.drop_duplicates()
 print(f"\nLength of DF of unique entries:{len(pclustersDF)}")
 
 # Start timing
