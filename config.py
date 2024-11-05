@@ -15,18 +15,22 @@ Created on Thu Oct 31 12:15:23 2024
 
 ###############################################################################
 #==================
-# data store
+# source dir
 #==================
 # ebi-cluster
 #source_dir = "nfs/production/martin/uniprot/users/insana/proteomescomparison"
 
 # home
-#source_dir = "/home/pub/Work/data_arise_proteome"
+source_dir = "/home/pub/Work/data_arise_proteome"
 
 # ebi-local machine
-source_dir = "/home/tunstall/Documents/arise/data_arise_proteome"
+#source_dir = "/home/tunstall/Documents/arise/data_arise_proteome"
 
+#==================
+# files
+#==================
 # pig proteome file
+
 ## all .fa files
 proteome_indir = source_dir + "/pig"
 print("\nReading proteome file from:", proteome_indir)

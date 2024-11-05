@@ -194,7 +194,7 @@ cols_to_output = ['cluster_id',
                   'protein2_id_proteome']
 
 print(f"writing file: {updated_clusterDF}\nDim of df: {pclustersDF[cols_to_output].shape}")
-pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
+#pclustersDF[cols_to_output].to_csv(output_clusterDF_file, sep='\t', index=True)
 print(f"Updated file saved as {output_clusterDF_file}")
 
 ###############################################################################
