@@ -2,23 +2,34 @@
 #Created on Wed Nov 20 17:28:50 2024
 #@author: tanu
 
-if [ "X$1" == "X" ]; then
-  >&2 echo "You need to provide a directory containing FASTA files to align"
-  >&2 echo "example:"
-  >&2 echo "   $0 /path/to/fasta/dir"
+
+if [ $# -lt 2 ]; then
+  >&2 echo "Usage: $0 <input_fasta_dir> <output_dir> [threads]"
+  >&2 echo "Example:"
+  >&2 echo "   $0 /path/to/fasta/dir /path/to/output/dir 8"
   exit 22
 fi
+
 fasta_dir=$1
+output_dir=$2
+n_threads=${3:-8}  # Default to 8 threads if not specified
 
 set -e
 set -u
 
 if [ ! -d "${fasta_dir}" ]; then
-  >&2 echo "ERROR: Directory ${fasta_dir} does not exist or is not a directory"
+  >&2 echo "ERROR: Input directory ${fasta_dir} does not exist or is not a directory"
   exit 1
 fi
 
+if [ ! -d "${output_dir}" ]; then
+  >&2 echo "Creating output directory: ${output_dir}"
+  mkdir -p "${output_dir}"
+fi
+
 echo "FASTA directory: ${fasta_dir}"
+echo "Output directory: ${output_dir}"
+echo "Number of threads: ${n_threads}"
 
 # Count the number of FASTA files
 fasta_count=$(find "${fasta_dir}" -maxdepth 1 \( -name "*.fa" -o -name "*.fasta" \) | wc -l)
@@ -26,7 +37,6 @@ echo "Number of FASTA files in ${fasta_dir}: ${fasta_count}"
 
 sequence_type="Protein"
 output_file_format="fa"
-n_threads=8
 
 printf "\nStarting...\n\n"
 start_time_whole=$(date +%s)
@@ -37,20 +47,15 @@ for fasta_file in ${fasta_dir}/*.fa ${fasta_dir}/*.fasta; do
     continue
   fi
   
-  # Count the number of sequences using grep
   seq_count=$(grep -c "^>" "${fasta_file}")
-  #seq_count=$(awk 'BEGIN {count=0} /^>/ {count++} END {print count}' "${fasta_file}")
 
   ((current_file+=1))
-  #printf "\nProcessing ${current_file}/${fasta_count}: ${fasta_file}"
   printf "\nProcessing ${current_file}/${fasta_count}"
-  
-  #printf "\nStarting alignment of ${fasta_file}, \nNumber of sequences = ${seq_count}"
   printf "\nStarting alignment: ${fasta_file}"
 
   base_name=$(basename ${fasta_file} .fa)
   base_name=${base_name%.fasta}
-  output_file="${fasta_dir}/${base_name}.aln"
+  output_file="${output_dir}/${base_name}.aln"
 
   printf "\nNumber of sequences = ${seq_count}"
   start_time=$(date +%s)
@@ -82,14 +87,4 @@ minutes_whole=$(((execution_time_whole % 3600) / 60))
 seconds_whole=$((execution_time_whole % 60))
 
 printf "\nAll alignments completed."
-printf "\n"${fasta_count}" fasta file alignments completed in %02d:%02d:%02d (HH:MM:SS)\n" ${hours_whole} ${minutes_whole} ${seconds_whole}
-
-##########
-#foo=0
-
-#until [ $foo -gt 99 ]
-#do
-#  echo foo: $foo
-##  ((foo+=1))
-#  ((foo=foo+1))
-#done
+printf "\n${fasta_count} fasta file alignments completed in %02d:%02d:%02d (HH:MM:SS)\n" ${hours_whole} ${minutes_whole} ${seconds_whole}
