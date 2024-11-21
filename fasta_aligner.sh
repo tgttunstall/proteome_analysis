@@ -2,7 +2,6 @@
 #Created on Wed Nov 20 17:28:50 2024
 #@author: tanu
 
-
 if [ $# -lt 2 ]; then
   >&2 echo "Usage: $0 <input_fasta_dir> <output_dir> [threads]"
   >&2 echo "Example:"
