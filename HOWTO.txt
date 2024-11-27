@@ -1,0 +1,48 @@
+#procedure to create alignments of clusters for multiple proteomes and extract the variation
+#by Giuseppe Insana
+
+#Started:
+#Sep 5 2024
+#Lastmod:
+#Tue 19 Nov 20:33:49 GMT 2024
+
+#for following examples we will use ecoli.tsv
+set=ecoli.tsv
+fastadir=ecoli
+coverage=0.5
+minseqid=0.65
+resultsdir=results_${set}_c${coverage}_p${minseqid}/
+clustersdir=clusters_${set}_c${coverage}_p${minseqid}/
+
+#(1) get list of proteome_ids into a file, e.g. ecoli_proteomeids.out (e.g. via sql query)
+sqlqueryfilejos.sh ${set}_proteomeids.sql
+
+#(2) collect (symlink or download) fasta files
+./collect_proteome_files.sh ${set}_proteomeids.out #will also create ${set}.tsv
+
+#(3) start process to index all the fasta files via ffdb creating fasta indexes
+#EITHER:
+#fasta_indexer.sh pig.tsv # if few fasta files
+#OR:
+sbatch -o ${set}.tsv_fastaindexing.out -J "indexing of ${set} fasta files" --mem=1G --time=4:00:00 -p short --ntasks=10 --cpus-per-task=1 --nodes=1 --mail-type=FAIL,END,REQUEUE,INVALID_DEPEND,ARRAY_TASKS --mail-user=insana --wrap="./fasta_indexer_parallel.sh ecoli.tsv" # if many many fasta files
+
+#(4) easycluster.sh dirname (or if too many, easycluster.sh the tsvfile created by (2))
+./easycluster.sh $set $coverage $minseqid
+
+#(5) label the Specie_protein_cluster file: (using label_cluster, either py or jl)
+threads=15; batchsize=2000; mem=20G
+sbatch -J "label $set clusters parallel t$threads b$batchsize" -o ${set}_labelling_parallel_t${threads}_b${batchsize}_r.out --parsable --mem=$mem --time=1-0 -p production --ntasks=1 --cpus-per-task=$threads --nodes=1 --mail-type=FAIL,END,REQUEUE,INVALID_DEPEND,ARRAY_TASKS --mail-user=insana --wrap="./label_clusters.py --fasta_dir ${fastadir}/ --input_file ${resultsdir}/Specie_protein_cluster.tsv --out_file ${resultsdir}/Labelled_Specie_protein_cluster.tsv --prefix proteome_ --extension .fa --threads $threads --batchsize $batchsize --sortlabels --uniq"
+
+#(6) filter the clusters from the labelled file at desired --minproteomes threshold
+minproteomes=120000
+sbatch -J "filter $set clusters" -o ${set}_filtering.out --parsable --mem=1G --time=0:15:00 -p short --ntasks=1 --cpus-per-task=1 --nodes=1 --mail-type=FAIL,END,REQUEUE,INVALID_DEPEND,ARRAY_TASKS --mail-user=insana --wrap="./filter_clusters.py --input_file ${resultsdir}/Labelled_Specie_protein_cluster.tsv --out_file ${resultsdir}/Protein_clusters_m${minproteomes}.tsv --minproteomes $minproteomes"
+
+#(7) extract the sequences for each cluster using the filtered list and the fasta indexes
+
+sbatch -J "extract $set clusters sequences" -o ${set}_extracting.out --parsable --mem=1G --time 1-0 -p production --ntasks=1 --cpus-per-task=1 --nodes=1 --mail-type=FAIL,END,REQUEUE,INVALID_DEPEND,ARRAY_TASKS --mail-user=insana --wrap="./extract_clusters.py --input_file ${resultsdir}/Protein_clusters_m${minproteomes}.tsv --fasta_dir ${fastadir}/ --out_dir ${clustersdir} -e .fa -p proteome_"
+
+#(8) align all clusters
+#clustalo (http://www.clustal.org/omega/) e.g. Linux 64bit: http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64
+
+#(9) read alignments extracting only positions with variation
+#pandas + biopython
