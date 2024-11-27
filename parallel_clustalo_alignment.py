@@ -52,6 +52,8 @@ def get_alignment(input_file, output_dir, clustalo_threads
     output_file = os.path.join(output_dir, f"{base_name}.aln")  # Construct output file path
 
     # Call Clustal Omega for alignment
+   # TODO: maybe -at --align_threads
+    
     clustalo_call = [CLUSTALO_EXE,
                      "--infile={}".format(input_file),
                      "--outfmt=fa",
