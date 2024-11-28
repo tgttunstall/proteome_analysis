@@ -102,8 +102,10 @@ def check_args():
         help="Number of threads for parallel processing.")
     parser.add_argument("-e", "--extension", type=str, default=".fa",
         help="File extension for FASTA files (default: .fa).")
-    parser.add_argument("--report_lengths", action="store_true",
-        help="Report the number and lengths of sequences in each FASTA file.")
+
+    #TODO: print seq length from fasta files only when requested.
+    #parser.add_argument("--report_lengths", action="store_true",
+    #    help="Report the number and lengths of sequences in each FASTA file.")
 
     # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
     #     help="Directory containing all proteome .fa files.")
