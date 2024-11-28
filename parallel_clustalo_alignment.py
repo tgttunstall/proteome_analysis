@@ -102,6 +102,8 @@ def check_args():
         help="Number of threads for parallel processing.")
     parser.add_argument("-e", "--extension", type=str, default=".fa",
         help="File extension for FASTA files (default: .fa).")
+    parser.add_argument("--report_lengths", action="store_true",
+        help="Report the number and lengths of sequences in each FASTA file.")
 
     # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
     #     help="Directory containing all proteome .fa files.")
@@ -200,6 +202,7 @@ def get_alignment(input_file, args):
 
     return output_file
 
+
 def worker_process(my_file, args, total_workers):
     """
     Process a single file in parallel for Clustal Omega.
@@ -207,6 +210,86 @@ def worker_process(my_file, args, total_workers):
     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
 
+    # Get the number of sequences and their lengths
+    try:
+        seq_count, seq_lengths = get_sequence_lengths(my_file)
+        eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences.")
+    except Exception as e:
+        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
+        return None
+
+    # Process the alignment
+    try:
+        return get_alignment(my_file, args)
+    except Exception as e:
+        eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
+        return None
+
+# def worker_process(my_file, args, total_workers):
+#     """
+#     Process a single file in parallel for Clustal Omega.
+#     """
+#     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
+#     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
+
+#     try:
+#         return get_alignment(my_file, args)
+#     except Exception as e:
+#         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
+#         return None
+
+def get_sequence_lengths(fasta_file, return_lengths=True):
+    """
+    Reads a FASTA file and returns the number of sequences and their lengths.
+    Optionally returns a list of lengths if `return_lengths=True`.
+    """
+    sequence_count = 0
+    total_length = 0
+    sequence_lengths = [] if return_lengths else None
+    current_length = 0
+
+    with open(fasta_file, 'r') as f:
+        for line in f:
+            if line.startswith(">"):
+                # If a sequence length was accumulated, process it
+                if current_length > 0:
+                    sequence_count += 1
+                    total_length += current_length
+                    if return_lengths:
+                        sequence_lengths.append(current_length)
+                current_length = 0  # Reset for the next sequence
+            else:
+                current_length += len(line.strip())  # Accumulate sequence length
+
+        # Process the last sequence
+        if current_length > 0:
+            sequence_count += 1
+            total_length += current_length
+            if return_lengths:
+                #print(f"Sequence lengths in {fasta_file}: {sequence_lengths}")
+                sequence_lengths.append(current_length)
+
+    # Return both sequence count and lengths if requested
+    return sequence_count, sequence_lengths if return_lengths else total_length
+
+def worker_process(my_file, args, total_workers):
+    """
+    Process a single file in parallel for Clustal Omega.
+    """
+    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
+    eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
+
+    # Get the number of sequences and their total length
+    try:
+        seq_count, total_length = get_sequence_lengths(my_file)
+#        eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
+        eprint(f"Total no. of sequences:{seq_count}")
+        eprint(f"Length of each sequence:{total_length}")
+    except Exception as e:
+        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
+        return None
+
+    # Process the alignment
     try:
         return get_alignment(my_file, args)
     except Exception as e:
@@ -274,5 +357,5 @@ if __name__ == "__main__":
     main()
 
 ###############################################################################
-#python parallel_clustalo_alignment.py -d /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force
+#python parallel_clustalo_alignment.py -d /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force --report_lengths
 #python parallel_clustalo_alignment.py -f /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force
