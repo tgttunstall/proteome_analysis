@@ -359,5 +359,17 @@ if __name__ == "__main__":
     main()
 
 ###############################################################################
-#python parallel_clustalo_alignment.py -d /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force --report_lengths
-#python parallel_clustalo_alignment.py -f /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force
+#python parallel_clustalo_alignment.py 
+#-d /home/pub/Work/data_arise_proteome/testC 
+#-o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L 
+#-t 2 
+#-at 4 
+#--force 
+#--report_lengths
+
+#python parallel_clustalo_alignment.py
+# -f /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt 
+# -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L 
+# -t 2 
+# -at 4 
+# --force
