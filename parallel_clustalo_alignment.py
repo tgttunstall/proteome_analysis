@@ -6,6 +6,8 @@ import glob
 import time
 import sys
 from typing import List, Optional
+from tqdm import tqdm
+
 #from ffdb import split_file  # Importing split_file from ffdb
 from ffdb import *
 
@@ -173,7 +175,7 @@ def get_alignment(input_file, args):
         "--infile", input_file,   #f"--infile={input_file}",
         "--outfile", output_file, #"--outfile", "{}".format(output_file)
         "--outfmt", args.outfmt,
-        "--threads", str(args.align_threads),
+        "--threads", str(args.align_threads), #because subprocess.run excepts it!
         "--seqtype", args.seqtype,
     ]
 
@@ -184,7 +186,7 @@ def get_alignment(input_file, args):
     # Log the command and the number of threads being used
     eprint(f"Using {args.align_threads} thread(s) for Clustal Omega")
     eprint(f"\nForce overwrite enabled: {args.force}")
-    eprint(f"Running Clustal Omega with command:\n {' '.join(clustalo_call)}")
+    eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}")
 
     start_time = time.time()
 
@@ -219,41 +221,77 @@ def main():
     
     args = check_args()  # Parse command line arguments
 
-    # Determine input mode and validate
+###############################################################################
+#     # Determine input mode and validate
+#     if args.input_fasta_dir:
+#         eprint(f" |-- Input mode: Directory ({args.input_fasta_dir})")
+#         fasta_files = glob.glob(os.path.join(args.input_fasta_dir, f"*{args.extension}"))
+#         eprint(f" |-- Found {len(fasta_files)} FASTA files in directory.")
+
+
+#         if args.threads > 1:
+#             with Pool(args.threads) as pool:
+#                 results = pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files])
+#             eprint(f" |-- Processed {len(results)} files.")
+#             eprint(f" |-- Number of workers: {args.threads}")
+            
+#         else:
+#             for fasta_file in fasta_files:
+#                 worker_process(fasta_file, args)
+
+#     elif args.input_fasta_list:
+#         eprint(f" |-- Input mode: File List ({args.input_fasta_list})")
+        
+#         # Read the list of FASTA files from the provided file
+#         with open(args.input_fasta_list, 'r') as f:
+#             fasta_files = [line.strip() for line in f if line.strip()]  # Read lines and strip whitespace
+
+#         eprint(f" |-- Found {len(fasta_files)} FASTA files listed in {args.input_fasta_list}.")
+
+#         if args.threads > 1:
+#             with Pool(args.threads) as pool:
+#                 results = pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files])
+#             eprint(f" |-- Processed {len(results)} files.")
+#             eprint(f" |-- Number of workers: {args.threads}")
+#         else:
+#             for fasta_file in fasta_files:
+#                 worker_process(fasta_file, args)
+
+#     else:
+#         exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
+# ###############################################################################
+    # For directory mode
     if args.input_fasta_dir:
-        eprint(f" |-- Input mode: Directory ({args.input_fasta_dir})")
         fasta_files = glob.glob(os.path.join(args.input_fasta_dir, f"*{args.extension}"))
         eprint(f" |-- Found {len(fasta_files)} FASTA files in directory.")
-
+    
         if args.threads > 1:
             with Pool(args.threads) as pool:
-                results = pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files])
-            eprint(f" |-- Processed {len(results)} files.")
-            eprint(f" |-- Number of workers: {args.threads}")
+                results = list(tqdm(
+                    pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files]),
+                    desc="Processing files in parallel",
+                    total=len(fasta_files)
+                ))
         else:
-            for fasta_file in fasta_files:
+            for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
                 worker_process(fasta_file, args)
-
+    
+    # For file list mode
     elif args.input_fasta_list:
-        eprint(f" |-- Input mode: File List ({args.input_fasta_list})")
-        
-        # Read the list of FASTA files from the provided file
         with open(args.input_fasta_list, 'r') as f:
-            fasta_files = [line.strip() for line in f if line.strip()]  # Read lines and strip whitespace
-
+            fasta_files = [line.strip() for line in f if line.strip()]
         eprint(f" |-- Found {len(fasta_files)} FASTA files listed in {args.input_fasta_list}.")
-
+    
         if args.threads > 1:
             with Pool(args.threads) as pool:
-                results = pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files])
-            eprint(f" |-- Processed {len(results)} files.")
-            eprint(f" |-- Number of workers: {args.threads}")
+                results = list(tqdm(
+                    pool.starmap(worker_process, [(fasta_file, args) for fasta_file in fasta_files]),
+                    desc="Processing files in parallel",
+                    total=len(fasta_files)
+                ))
         else:
-            for fasta_file in fasta_files:
+            for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
                 worker_process(fasta_file, args)
-
-    else:
-        exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
 
     end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     total_elapsed_time = elapsed_time(initial_secs)
