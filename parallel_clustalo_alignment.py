@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import argparse
 from multiprocessing import Pool, current_process
@@ -240,7 +241,7 @@ def worker_process(my_file, args, total_workers):
 #         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
 #         return None
 
-def get_sequence_lengths(fasta_file, return_lengths=True):
+def get_sequence_lengths(fasta_file, return_lengths=False):
     """
     Reads a FASTA file and returns the number of sequences and their lengths.
     Optionally returns a list of lengths if `return_lengths=True`.
@@ -357,19 +358,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-
-###############################################################################
-#python parallel_clustalo_alignment.py 
-#-d /home/pub/Work/data_arise_proteome/testC 
-#-o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L 
-#-t 2 
-#-at 4 
-#--force 
-#--report_lengths
-
-#python parallel_clustalo_alignment.py
-# -f /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt 
-# -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L 
-# -t 2 
-# -at 4 
-# --force
