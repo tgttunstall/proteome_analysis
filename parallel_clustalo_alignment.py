@@ -78,41 +78,11 @@ def get_alignment(input_file, output_dir, clustalo_threads
 def worker_process(my_file, args):
     """Process to work in parallel extracting sequences from FASTA files using Clustal Omega."""
     workerid = int(current_process().name.split("-")[1]) - 1  # 0..threads-1
-    if args.progress:
-        eprint(f" [{workerid}] working on {my_file}")  # Debug print
+#    if args.progress:
+#        eprint(f" [{workerid}] working on {my_file}")  # Debug print
+    eprint(f" [{workerid}] working on {my_file}")  # Debug print
 
     return get_alignment(my_file, args.out_dir, args.clustalo_threads)  # Call get_alignment
-
-# def check_args():
-#     """Parse arguments and check for error conditions."""
-#     parser = argparse.ArgumentParser(description="Parallel Clustal Omega alignment")
-    
-#     parser.add_argument("-i", "--input", type=str, required=True,
-#                         help="Path to the input file or directory containing FASTA files.")
-    
-#     parser.add_argument("-o", "--out_dir", type=str, required=True,
-#                         help="Output directory for aligned files.")
-    
-#     parser.add_argument("-t", "--threads", type=int, default=1,
-#                         help="Number of threads for parallel processing.")
-    
-#     parser.add_argument("-ct", "--clustalo_threads", type=int, default=1,
-#                         help="Number of threads for Clustal Omega.")
-    
-#     #parser.add_argument("-f", "--force", action="store_true",
-#     #                    help="Force overwrite of existing output files.")
-    
-#     #parser.add_argument("-st", "--seq_type", type=str, default="Protein",
-#     #                    help="Sequence type to align.")
-    
-#     parser.add_argument("-e", "--extension", type=str, default=".fa",
-#                         help="File extension for FASTA files (default: .fa).")
-    
-#     parser.add_argument("--progress", action="store_true",
-#                         help="Show a progress bar.")
-
-#     return parser.parse_args()
-
 
 def check_args():
     """
@@ -154,55 +124,35 @@ def check_args():
             print(DESCRIPTION)
             super().print_help(*args, **kwargs)
 
-    parser = CustomArgumentParser(
-        description="Parallel Clustal Omega alignment"
-    )
+    parser = CustomArgumentParser(description="Parallel Clustal Omega alignment")
 
-    parser.add_argument(
-        "-i", "--input_fasta_dir", type=str, required=False,
-        help="Directory containing all proteome .fa files."
-    )
+    parser.add_argument("-i", "--input_fasta_dir", type=str, required=False,
+        help="Directory containing all proteome .fa files.")
 
-    parser.add_argument(
-        "-l", "--input_fasta_list", type=is_valid_file, required=False,
-        help="Path to a text file containing a list of FASTA files."
-    )
+    parser.add_argument( "-l", "--input_fasta_list", type=is_valid_file, required=False,
+        help="Path to a text file containing a list of FASTA files.")
 
-    parser.add_argument(
-        "-o", "--out_dir", type=str, required=True,
-        help="Output directory for aligned files."
-    )
+    parser.add_argument("-o", "--out_dir", type=str, required=True,
+        help="Output directory for aligned files.")
 
-    parser.add_argument(
-        "-t", "--threads", type=positive_integer, default=1,
-        help="Number of threads for parallel processing."
-    )
+    parser.add_argument("-t", "--threads", type=positive_integer, default=1,
+        help="Number of threads for parallel processing.")
 
-    parser.add_argument(
-        "-ct", "--clustalo_threads", type=positive_integer, default=1,
-        help="Number of threads for Clustal Omega."
-    )
+    parser.add_argument("-ct", "--clustalo_threads", type=positive_integer, default=1,
+        help="Number of threads for Clustal Omega.")
 
-    parser.add_argument(
-        "-e", "--extension", type=str, default=".fa",
-        help="File extension for FASTA files (default: .fa)."
-    )
+    parser.add_argument("-e", "--extension", type=str, default=".fa",
+        help="File extension for FASTA files (default: .fa).")
 
-    parser.add_argument(
-        "-f", "--force", action="store_true",
-        help="Force overwrite of existing output files."
-    )
+    parser.add_argument("-f", "--force", action="store_true",
+        help="Force overwrite of existing output files.")
 
-    parser.add_argument(
-        "--seq_type", type=str, choices=["Protein", "DNA"], default="Protein",
-        help="Specify the sequence type (e.g., 'Protein' or 'DNA')."
-    )
+    parser.add_argument("--seq_type", type=str, choices=["Protein", "DNA"], default="Protein",
+        help="Specify the sequence type (e.g., 'Protein' or 'DNA').")
 
     # TODO Not sure of its use here!
-    parser.add_argument(
-        "--progress", action="store_true",
-        help="Show a progress bar."
-    )
+#    parser.add_argument("--progress", action="store_true",
+#        help="Show a progress bar.")
     
     args = parser.parse_args()
 
@@ -286,11 +236,42 @@ def main():
 if __name__ == "__main__":
    main()
 
+###############################################################################
+# def check_args():
+#     """Parse arguments and check for error conditions."""
+#     parser = argparse.ArgumentParser(description="Parallel Clustal Omega alignment")
+    
+#     parser.add_argument("-i", "--input", type=str, required=True,
+#                         help="Path to the input file or directory containing FASTA files.")
+    
+#     parser.add_argument("-o", "--out_dir", type=str, required=True,
+#                         help="Output directory for aligned files.")
+    
+#     parser.add_argument("-t", "--threads", type=int, default=1,
+#                         help="Number of threads for parallel processing.")
+    
+#     parser.add_argument("-ct", "--clustalo_threads", type=int, default=1,
+#                         help="Number of threads for Clustal Omega.")
+    
+#     #parser.add_argument("-f", "--force", action="store_true",
+#     #                    help="Force overwrite of existing output files.")
+    
+#     #parser.add_argument("-st", "--seq_type", type=str, default="Protein",
+#     #                    help="Sequence type to align.")
+    
+#     parser.add_argument("-e", "--extension", type=str, default=".fa",
+#                         help="File extension for FASTA files (default: .fa).")
+    
+#     parser.add_argument("--progress", action="store_true",
+#                         help="Show a progress bar.")
+
+#     return parser.parse_args()
 
 #    if progress:
 #        pbar = tqdm(total=input_file_size, unit="B", position=args.pbar_position)
 
 
-#python parallel_clustalo_alignment.py -i /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0 -t 2 --clustalo_threads 4
+###############################################################################
 
+#python parallel_clustalo_alignment.py -i /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0 -t 2 --clustalo_threads 4
 #python parallel_clustalo_alignment.py -i /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 --clustalo_threads 4
