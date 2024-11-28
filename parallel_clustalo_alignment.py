@@ -41,48 +41,6 @@ def eprint(*myargs, **kwargs):
     """Prints the provided arguments to stderr."""
     print(*myargs, file=sys.stderr, **kwargs)
 
-def get_alignment(input_file, output_dir, clustalo_threads
-                  #,force
-                  #,sequence_type
-                  ):
-    """
-    Align sequences using Clustal Omega and write to output file.
-    """
-    base_name = os.path.splitext(os.path.basename(input_file))[0]  # Get base name without extension
-    output_file = os.path.join(output_dir, f"{base_name}.aln")  # Construct output file path
-
-    # Call Clustal Omega for alignment
-   # TODO: maybe -at --align_threads
-    
-    clustalo_call = [CLUSTALO_EXE,
-                     "--infile={}".format(input_file),
-                     "--outfmt=fa",
-                     "--outfile={}".format(output_file),
-                     "--force", 
-                     #"--seq_type=Protein",
-                     f"--threads={clustalo_threads}"]
-    
-    #if force:
-    #clustalo_call.append("--force")  # Add --force if specified
-    
-    eprint(f"Running Clustal Omega with command: {' '.join(clustalo_call)}")  # Print the command being run
-
-    start_time = time.time()  # Start timing
-    subprocess.run(clustalo_call)
-    elapsed = elapsed_time(start_time)  # Calculate elapsed time
-    
-    eprint(f"Processed {input_file} -> {output_file} in {elapsed}")
-    
-    return output_file  # Return the name of the output file
-
-def worker_process(my_file, args):
-    """Process to work in parallel extracting sequences from FASTA files using Clustal Omega."""
-    workerid = int(current_process().name.split("-")[1]) - 1  # 0..threads-1
-#    if args.progress:
-#        eprint(f" [{workerid}] working on {my_file}")  # Debug print
-    eprint(f" [{workerid}] working on {my_file}")  # Debug print
-
-    return get_alignment(my_file, args.out_dir, args.clustalo_threads)  # Call get_alignment
 
 def check_args():
     """
@@ -97,7 +55,7 @@ def check_args():
                     "{} is not a positive integer".format(value)
                 )
         except ValueError:
-            raise Exception("{} is not an integer".format(value))
+            raise argparse.ArgumentTypeError("{} is not an integer".format(value))
         return value
 
     def is_valid_file(path):
@@ -121,39 +79,55 @@ def check_args():
             """
             Print custom text before the default help message.
             """
-            print(DESCRIPTION)
+            print("Run Clustal Omega in parallel across multiple input files.")
             super().print_help(*args, **kwargs)
 
-    parser = CustomArgumentParser(description="Parallel Clustal Omega alignment")
+    parser = CustomArgumentParser(description="Parallelising Clustal Omega alignment")
 
-    parser.add_argument("-i", "--input_fasta_dir", type=str, required=False,
+    #==================================
+    # General script-level arguments
+    #==================================
+    
+    # General input options
+    input_group = parser.add_argument_group("Input Options (choose one)")
+    input_group.add_argument("-d", "--input_fasta_dir", type=str, required=False,
         help="Directory containing all proteome .fa files.")
-
-    parser.add_argument( "-l", "--input_fasta_list", type=is_valid_file, required=False,
+    input_group.add_argument("-f", "--input_fasta_list", type=is_valid_file, required=False,
         help="Path to a text file containing a list of FASTA files.")
-
-    parser.add_argument("-o", "--out_dir", type=str, required=True,
-        help="Output directory for aligned files.")
-
+         
+    # General options
     parser.add_argument("-t", "--threads", type=positive_integer, default=1,
         help="Number of threads for parallel processing.")
-
-    parser.add_argument("-ct", "--clustalo_threads", type=positive_integer, default=1,
-        help="Number of threads for Clustal Omega.")
-
     parser.add_argument("-e", "--extension", type=str, default=".fa",
         help="File extension for FASTA files (default: .fa).")
 
-    parser.add_argument("-f", "--force", action="store_true",
+    # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
+    #     help="Directory containing all proteome .fa files.")
+
+    # parser.add_argument("-f", "--input_fasta_list", type=is_valid_file, required=False,
+    #     help="Path to a text file containing a list of FASTA files.")  
+
+    #==================================
+    # Clustal Omega-specific arguments
+    #==================================
+
+    clustalo_group = parser.add_argument_group("Clustal Omega specific arguments")
+    
+    clustalo_group.add_argument("-o", "--out_dir", type=str, required=True,
+        help="Output directory for aligned files.")
+
+    clustalo_group.add_argument("-at", "--align_threads", type=positive_integer, default=1,
+        help="Number of threads for Clustal Omega.")
+
+    clustalo_group.add_argument("--force", action="store_true",
         help="Force overwrite of existing output files.")
 
-    parser.add_argument("--seq_type", type=str, choices=["Protein", "DNA"], default="Protein",
+    clustalo_group.add_argument("--seqtype", type=str, choices=["Protein", "DNA"], default="Protein",
         help="Specify the sequence type (e.g., 'Protein' or 'DNA').")
-
-    # TODO Not sure of its use here!
-#    parser.add_argument("--progress", action="store_true",
-#        help="Show a progress bar.")
     
+    clustalo_group.add_argument("--outfmt", type=str, choices=["fa","clu","msf","phy","selex","st","vie"], default="fa",
+        help="Specify the MSA output format.")
+
     args = parser.parse_args()
 
     # Validate input arguments
@@ -174,14 +148,68 @@ def check_args():
             exit_with_error(f"ERROR: Cannot create directory '{args.out_dir}'", 1)
 
     eprint(f" |-- Output directory: {args.out_dir}")
-    
-    if args.threads > 1:
+        
+    #args = parser.parse_args()
+
+    if args.threads > 1 and args.input_fasta_list:
         args.chunksize = calculate_blocksize(args.input_fasta_list, args.threads)
         eprint(
             f" |-- threads: {args.threads}; input file will be split in chunks of max {args.chunksize} bytes"
         )
 
     return args
+
+def get_alignment(input_file, args):
+    """
+    Align sequences using Clustal Omega and write to the output file.
+    """
+    # Derive the output file path from args.out_dir
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+    output_file = os.path.join(args.out_dir, f"{base_name}.aln")
+
+    # Construct Clustal Omega command
+    clustalo_call = [
+        CLUSTALO_EXE,
+        "--infile", input_file,   #f"--infile={input_file}",
+        "--outfile", output_file, #"--outfile", "{}".format(output_file)
+        "--outfmt", args.outfmt,
+        "--threads", str(args.align_threads),
+        "--seqtype", args.seqtype,
+    ]
+
+    # Add --force if specified
+    if args.force:
+        clustalo_call.append("--force")
+
+    # Log the command and the number of threads being used
+    eprint(f"Using {args.align_threads} thread(s) for Clustal Omega")
+    eprint(f"\nForce overwrite enabled: {args.force}")
+    eprint(f"Running Clustal Omega with command:\n {' '.join(clustalo_call)}")
+
+    start_time = time.time()
+
+    try:
+        subprocess.run(clustalo_call, check=True)
+        elapsed = time.time() - start_time
+        eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s")
+    except subprocess.CalledProcessError as e:
+        eprint(f"Error during alignment of {input_file}: {e}")
+        raise
+
+    return output_file
+
+def worker_process(my_file, args):
+    """
+    Process a single file in parallel for Clustal Omega.
+    """
+    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
+    eprint(f"[Worker {workerid}] Processing {my_file}")
+
+    try:
+        return get_alignment(my_file, args)
+    except Exception as e:
+        eprint(f"[Worker {workerid}] Failed to process {my_file}: {e}")
+        return None
 
 def main():
     initial_secs = time.time()  # For total time count
@@ -237,41 +265,5 @@ if __name__ == "__main__":
    main()
 
 ###############################################################################
-# def check_args():
-#     """Parse arguments and check for error conditions."""
-#     parser = argparse.ArgumentParser(description="Parallel Clustal Omega alignment")
-    
-#     parser.add_argument("-i", "--input", type=str, required=True,
-#                         help="Path to the input file or directory containing FASTA files.")
-    
-#     parser.add_argument("-o", "--out_dir", type=str, required=True,
-#                         help="Output directory for aligned files.")
-    
-#     parser.add_argument("-t", "--threads", type=int, default=1,
-#                         help="Number of threads for parallel processing.")
-    
-#     parser.add_argument("-ct", "--clustalo_threads", type=int, default=1,
-#                         help="Number of threads for Clustal Omega.")
-    
-#     #parser.add_argument("-f", "--force", action="store_true",
-#     #                    help="Force overwrite of existing output files.")
-    
-#     #parser.add_argument("-st", "--seq_type", type=str, default="Protein",
-#     #                    help="Sequence type to align.")
-    
-#     parser.add_argument("-e", "--extension", type=str, default=".fa",
-#                         help="File extension for FASTA files (default: .fa).")
-    
-#     parser.add_argument("--progress", action="store_true",
-#                         help="Show a progress bar.")
-
-#     return parser.parse_args()
-
-#    if progress:
-#        pbar = tqdm(total=input_file_size, unit="B", position=args.pbar_position)
-
-
-###############################################################################
-
-#python parallel_clustalo_alignment.py -i /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0 -t 2 --clustalo_threads 4
-#python parallel_clustalo_alignment.py -i /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 --clustalo_threads 4
+#python parallel_clustalo_alignment.py -d /home/pub/Work/data_arise_proteome/testC -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force
+#python parallel_clustalo_alignment.py -f /home/pub/Work/data_arise_proteome/testC/fasta_list_testC.txt -o /home/pub/Work/data_arise_proteome/testC/results_testC_v0L -t 2 -at 4 --force
