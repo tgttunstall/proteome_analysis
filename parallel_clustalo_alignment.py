@@ -44,7 +44,6 @@ def eprint(*myargs, **kwargs):
     """Prints the provided arguments to stderr."""
     print(*myargs, file=sys.stderr, **kwargs)
 
-
 def check_args():
     """
     Parse arguments and check for error conditions.
@@ -105,8 +104,8 @@ def check_args():
         help="File extension for FASTA files (default: .fa).")
 
     #TODO: print seq length from fasta files only when requested.
-    #parser.add_argument("--report_lengths", action="store_true",
-    #    help="Report the number and lengths of sequences in each FASTA file.")
+    parser.add_argument("--report_lengths", action="store_true",
+        help="Report the number and lengths of sequences in each FASTA file.")
 
     # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
     #     help="Directory containing all proteome .fa files.")
@@ -205,42 +204,6 @@ def get_alignment(input_file, args):
 
     return output_file
 
-
-def worker_process(my_file, args, total_workers):
-    """
-    Process a single file in parallel for Clustal Omega.
-    """
-    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
-    eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
-
-    # Get the number of sequences and their lengths
-    try:
-        seq_count, seq_lengths = get_sequence_lengths(my_file)
-        eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences.")
-    except Exception as e:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-        return None
-
-    # Process the alignment
-    try:
-        return get_alignment(my_file, args)
-    except Exception as e:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
-        return None
-
-# def worker_process(my_file, args, total_workers):
-#     """
-#     Process a single file in parallel for Clustal Omega.
-#     """
-#     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
-#     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
-
-#     try:
-#         return get_alignment(my_file, args)
-#     except Exception as e:
-#         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
-#         return None
-
 def get_sequence_lengths(fasta_file, return_lengths=False):
     """
     Reads a FASTA file and returns the number of sequences and their lengths.
@@ -279,18 +242,19 @@ def worker_process(my_file, args, total_workers):
     """
     Process a single file in parallel for Clustal Omega.
     """
-    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
+    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging+
     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
 
-    # Get the number of sequences and their total length
-    try:
-        seq_count, total_length = get_sequence_lengths(my_file)
-#        eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
-        eprint(f"Total no. of sequences:{seq_count}")
-        eprint(f"Length of each sequence:{total_length}")
-    except Exception as e:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-        return None
+    if args.report_lengths:
+        # Get the number of sequences and their total length
+        try:
+            seq_count, total_length = get_sequence_lengths(my_file, return_lengths=True)
+            #eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
+            eprint(f"Total no. of sequences:{seq_count}")
+            eprint(f"Length of each sequence or total no. of bases:{total_length}")
+        except Exception as e:
+            eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
+            return None
 
     # Process the alignment
     try:
@@ -316,14 +280,23 @@ def main():
         if args.threads > 1:
             with Pool(args.threads) as pool:
                 results = list(tqdm(
-                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    #pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
                     desc="Processing files in parallel",
-                    total=len(fasta_files)
+                    total=len(fasta_files),
+                    unit="file"
                 ))
             eprint(f" |-- Processed {len(results)} files.")
+        # else:            
+        #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
+        #         worker_process(fasta_file, args, total_workers=1)
+                    
         else:
-            for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
-                worker_process(fasta_file, args, total_workers=1)
+            results = list(tqdm(
+                (worker_process(fasta_file, args, 1) for fasta_file in fasta_files),
+                total=len(fasta_files),
+                desc="Processing files",
+                unit="file"))
 
     elif args.input_fasta_list:
         eprint(f" |-- Input mode: File List ({args.input_fasta_list})")
@@ -337,14 +310,23 @@ def main():
         if args.threads > 1:
             with Pool(args.threads) as pool:
                 results = list(tqdm(
-                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    #pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
                     desc="Processing files in parallel",
-                    total=len(fasta_files)
+                    total=len(fasta_files),
+                    unit="file"
+
                 ))
             eprint(f" |-- Processed {len(results)} files.")
+        # else:
+        #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
+        #         worker_process(fasta_file, args, total_workers=1)
         else:
-            for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
-                worker_process(fasta_file, args, total_workers=1)
+            results = list(tqdm(
+                (worker_process(fasta_file, args, 1) for fasta_file in fasta_files),
+                total=len(fasta_files),
+                desc="Processing files",
+                unit="file"))                
 
     else:
         exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
