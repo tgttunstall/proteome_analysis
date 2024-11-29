@@ -337,13 +337,7 @@ def main():
         # eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
         
     else:
-        eprint(" |-- ERROR: One or more files failed to process. Skipping stats.")
-
-
-
-    
-
-
-    
+        eprint(" |-- ERROR: One or more files failed to process.")
+   
 if __name__ == "__main__":
     main()
