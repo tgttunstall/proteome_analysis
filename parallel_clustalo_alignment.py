@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 29 14:16:53 2024
+
+@author: tanu
+"""
+#!/usr/bin/env python3
 import os
 import argparse
 from multiprocessing import Pool, current_process
@@ -43,6 +50,15 @@ def exit_with_error(message: str, code: int = 1):
 def eprint(*myargs, **kwargs):
     """Prints the provided arguments to stderr."""
     print(*myargs, file=sys.stderr, **kwargs)
+
+
+def output_stats(initial_secs):
+    end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    total_elapsed_time = elapsed_time(initial_secs)
+    #FIXME: should not print if there is any error right? Not sure!
+    eprint(" '-- Processing complete --'")
+    eprint(f" |-- END TIME: {end_time}")
+    eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")    
 
 def check_args():
     """
@@ -103,10 +119,8 @@ def check_args():
     parser.add_argument("-e", "--extension", type=str, default=".fa",
         help="File extension for FASTA files (default: .fa).")
 
-    #TODO: print seq length from fasta files only when requested.
-    parser.add_argument("--report_lengths", action="store_true",
-        help="Report the number and lengths of sequences in each FASTA file.")
-
+    parser.add_argument("--sequence_stats", choices=["none", "basic", "detailed"], default="none",
+                    help="Level of sequence statistics to report (none, basic, or detailed)")
     # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
     #     help="Directory containing all proteome .fa files.")
 
@@ -192,76 +206,117 @@ def get_alignment(input_file, args):
     #eprint(f"\nForce overwrite enabled: {args.force}")
     eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}")
 
-    start_time = time.time()
+    #start_time = time.time()
 
     try:
+        start_time = time.time()
         subprocess.run(clustalo_call, check=True)
         elapsed = time.time() - start_time
         eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s")
+        return output_file # success run
+    
     except subprocess.CalledProcessError as e:
         eprint(f"Error during alignment of {input_file}: {e}")
+        eprint(f"Command: {' '.join(clustalo_call)}")
+        eprint(f"Exit Code: {e.returncode}")
+        eprint(f"Error Output: {e.stderr}")
         raise
+        
+        #return None  # Failure: Return None to indicate error
 
-    return output_file
+    #return output_file
 
-def get_sequence_lengths(fasta_file, return_lengths=False):
-    """
-    Reads a FASTA file and returns the number of sequences and their lengths.
-    Optionally returns a list of lengths if `return_lengths=True`.
-    """
+def get_sequence_statistics(fasta_file):
     sequence_count = 0
-    total_length = 0
-    sequence_lengths = [] if return_lengths else None
-    current_length = 0
+    lengths = []
 
     with open(fasta_file, 'r') as f:
+        current_length = 0
         for line in f:
             if line.startswith(">"):
-                # If a sequence length was accumulated, process it
                 if current_length > 0:
                     sequence_count += 1
-                    total_length += current_length
-                    if return_lengths:
-                        sequence_lengths.append(current_length)
-                current_length = 0  # Reset for the next sequence
+                    lengths.append(current_length)
+                current_length = 0
             else:
-                current_length += len(line.strip())  # Accumulate sequence length
+                current_length += len(line.strip())
 
-        # Process the last sequence
         if current_length > 0:
             sequence_count += 1
-            total_length += current_length
-            if return_lengths:
-                #print(f"Sequence lengths in {fasta_file}: {sequence_lengths}")
-                sequence_lengths.append(current_length)
+            lengths.append(current_length)
 
-    # Return both sequence count and lengths if requested
-    return sequence_count, sequence_lengths if return_lengths else total_length
+    return {
+        "total_sequences": sequence_count,
+        "min_length": min(lengths) if lengths else 0,
+        "max_length": max(lengths) if lengths else 0,
+        "avg_length": sum(lengths) / sequence_count if sequence_count > 0 else 0,
+        "sequence_lengths": lengths
+    }
 
+
+# def worker_process(my_file, args, total_workers):
+#     """
+#     Process a single file in parallel for Clustal Omega.
+#     """
+#     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging+
+#     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
+
+#     if args.report_lengths:
+#         # Get the number of sequences and their total length
+#         try:
+#             seq_count, total_length = get_sequence_lengths(my_file, return_lengths=True)
+#             #eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
+#             eprint(f"Total no. of sequences:{seq_count}")
+#             eprint(f"Length of each sequence or total no. of bases:{total_length}")
+#             eprint(f"Sequence lengths: Min={min(total_length)}, Max={max(total_length)}, Avg={sum(total_length)/len(total_length):.2f}")
+#         except Exception as e:
+#             eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
+#             return None
+
+#     # Process the alignment: Call Clustal Omega
+#     # try:
+#     #     return get_alignment(my_file, args)
+#     # except Exception as e:
+#     #     eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
+#     #     return None
+    
+#     # new
+#     # Process the alignment: Call Clustal Omega
+#     result = get_alignment(my_file, args)
+#     if result is None:
+#         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}")
+#         return None
+    
+#     eprint(f"[Worker {workerid}/{total_workers}] Successfully processed {my_file}")
+#     return result
 def worker_process(my_file, args, total_workers):
-    """
-    Process a single file in parallel for Clustal Omega.
-    """
-    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging+
+    workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
 
-    if args.report_lengths:
-        # Get the number of sequences and their total length
-        try:
-            seq_count, total_length = get_sequence_lengths(my_file, return_lengths=True)
-            #eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
-            eprint(f"Total no. of sequences:{seq_count}")
-            eprint(f"Length of each sequence or total no. of bases:{total_length}")
-        except Exception as e:
-            eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-            return None
+    try:
+        stats = get_sequence_statistics(my_file)
+        if args.sequence_stats == "basic":
+            eprint(f"Total sequences: {stats['total_sequences']}")
+            eprint(f"Minimum length: {stats['min_length']}")
+            eprint(f"Maximum length: {stats['max_length']}")
+            eprint(f"Average length: {stats['avg_length']:.2f}")
+        elif args.sequence_stats == "detailed":
+            eprint(f"Total sequences: {stats['total_sequences']}")
+            eprint(f"Minimum length: {stats['min_length']}")
+            eprint(f"Maximum length: {stats['max_length']}")
+            eprint(f"Average length: {stats['avg_length']:.2f}")
+            eprint(f"Individual sequence lengths: {stats['sequence_lengths']}")
 
-    # Process the alignment
+    except Exception as e:
+        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
+        return None
+
     try:
         return get_alignment(my_file, args)
     except Exception as e:
         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
         return None
+
 
 def main():
     initial_secs = time.time()  # For total time count
@@ -280,24 +335,28 @@ def main():
         if args.threads > 1:
             with Pool(args.threads) as pool:
                 results = list(tqdm(
-                    #pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                    pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    #pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
                     desc="Processing files in parallel",
                     total=len(fasta_files),
-                    unit="file"
+                    #unit="file"
                 ))
             eprint(f" |-- Processed {len(results)} files.")
+            output_stats(initial_secs)
+
         # else:            
         #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
         #         worker_process(fasta_file, args, total_workers=1)
                     
         else:
             results = list(tqdm(
-                (worker_process(fasta_file, args, 1) for fasta_file in fasta_files),
+                (worker_process(fasta_file, args, total_workers=1) for fasta_file in fasta_files),
                 total=len(fasta_files),
                 desc="Processing files",
-                unit="file"))
-
+                #unit="file"
+                ))
+        #output_stats(initial_secs)
+        
     elif args.input_fasta_list:
         eprint(f" |-- Input mode: File List ({args.input_fasta_list})")
         
@@ -310,32 +369,40 @@ def main():
         if args.threads > 1:
             with Pool(args.threads) as pool:
                 results = list(tqdm(
-                    #pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                    pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
+                   #pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
                     desc="Processing files in parallel",
                     total=len(fasta_files),
-                    unit="file"
+                    #unit="file"
 
                 ))
             eprint(f" |-- Processed {len(results)} files.")
+            output_stats(initial_secs)
+
         # else:
         #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
         #         worker_process(fasta_file, args, total_workers=1)
         else:
             results = list(tqdm(
-                (worker_process(fasta_file, args, 1) for fasta_file in fasta_files),
+                (worker_process(fasta_file, args, total_workers=1) for fasta_file in fasta_files),
                 total=len(fasta_files),
                 desc="Processing files",
-                unit="file"))                
+                #unit="file"
+                ))                
+        #output_stats(initial_secs)
 
     else:
         exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
 
-    end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    total_elapsed_time = elapsed_time(initial_secs)
-    eprint(" '-- Processing complete --'")
-    eprint(f" |-- END TIME: {end_time}")
-    eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
+    # end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    # total_elapsed_time = elapsed_time(initial_secs)
+    # #FIXME: should not print if there is any error right? Not sure!
+    # eprint(" '-- Processing complete --'")
+    # eprint(f" |-- END TIME: {end_time}")
+    # eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
+    
+    
+
 
     
 if __name__ == "__main__":
