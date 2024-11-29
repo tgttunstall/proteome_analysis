@@ -52,10 +52,9 @@ def eprint(*myargs, **kwargs):
     print(*myargs, file=sys.stderr, **kwargs)
 
 
-def output_stats(initial_secs):
+def output_time(start_time):
     end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    total_elapsed_time = elapsed_time(initial_secs)
-    #FIXME: should not print if there is any error right? Not sure!
+    total_elapsed_time = elapsed_time(start_time)
     eprint(" '-- Processing complete --'")
     eprint(f" |-- END TIME: {end_time}")
     eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")    
@@ -179,53 +178,6 @@ def check_args():
 
     return args
 
-def get_alignment(input_file, args):
-    """
-    Align sequences using Clustal Omega and write to the output file.
-    """
-    # Derive the output file path from args.out_dir
-    base_name = os.path.splitext(os.path.basename(input_file))[0]
-    output_file = os.path.join(args.out_dir, f"{base_name}.aln")
-
-    # Construct Clustal Omega command
-    clustalo_call = [
-        CLUSTALO_EXE,
-        "--infile", input_file,   #f"--infile={input_file}",
-        "--outfile", output_file, #"--outfile", "{}".format(output_file)
-        "--outfmt", args.outfmt,
-        "--threads", str(args.align_threads), #because subprocess.run excepts it!
-        "--seqtype", args.seqtype,
-    ]
-
-    # Add --force if specified
-    if args.force:
-        clustalo_call.append("--force")
-
-    # Log the command and the number of threads being used
-    eprint(f"Using {args.align_threads} thread(s) for Clustal Omega")
-    #eprint(f"\nForce overwrite enabled: {args.force}")
-    eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}")
-
-    #start_time = time.time()
-
-    try:
-        start_time = time.time()
-        subprocess.run(clustalo_call, check=True)
-        elapsed = time.time() - start_time
-        eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s")
-        return output_file # success run
-    
-    except subprocess.CalledProcessError as e:
-        eprint(f"Error during alignment of {input_file}: {e}")
-        eprint(f"Command: {' '.join(clustalo_call)}")
-        eprint(f"Exit Code: {e.returncode}")
-        eprint(f"Error Output: {e.stderr}")
-        raise
-        
-        #return None  # Failure: Return None to indicate error
-
-    #return output_file
-
 def get_sequence_statistics(fasta_file):
     sequence_count = 0
     lengths = []
@@ -253,42 +205,50 @@ def get_sequence_statistics(fasta_file):
         "sequence_lengths": lengths
     }
 
+def get_alignment(input_file, args):
+    """
+    Align sequences using Clustal Omega and write to the output file.
+    """
+    # Derive the output file path from args.out_dir
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+    output_file = os.path.join(args.out_dir, f"{base_name}.aln")
 
-# def worker_process(my_file, args, total_workers):
-#     """
-#     Process a single file in parallel for Clustal Omega.
-#     """
-#     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging+
-#     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
+    # Construct Clustal Omega command
+    clustalo_call = [
+        CLUSTALO_EXE,
+        "--infile", input_file,   #f"--infile={input_file}",
+        "--outfile", output_file, #"--outfile", "{}".format(output_file)
+        "--outfmt", args.outfmt,
+        "--threads", str(args.align_threads), #because subprocess.run expects it!
+        "--seqtype", args.seqtype,
+    ]
 
-#     if args.report_lengths:
-#         # Get the number of sequences and their total length
-#         try:
-#             seq_count, total_length = get_sequence_lengths(my_file, return_lengths=True)
-#             #eprint(f"[Worker {workerid}/{total_workers}] {my_file} contains {seq_count} sequences with total length {total_length} bases.")
-#             eprint(f"Total no. of sequences:{seq_count}")
-#             eprint(f"Length of each sequence or total no. of bases:{total_length}")
-#             eprint(f"Sequence lengths: Min={min(total_length)}, Max={max(total_length)}, Avg={sum(total_length)/len(total_length):.2f}")
-#         except Exception as e:
-#             eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-#             return None
+    # Add --force if specified
+    if args.force:
+        clustalo_call.append("--force")
 
-#     # Process the alignment: Call Clustal Omega
-#     # try:
-#     #     return get_alignment(my_file, args)
-#     # except Exception as e:
-#     #     eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
-#     #     return None
+    # Log the command and the number of threads being used
+    #eprint(f"\nForce overwrite enabled: {args.force}")
+    eprint(f"Using {args.align_threads} thread(s) for Clustal Omega")
+    eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}")
     
-#     # new
-#     # Process the alignment: Call Clustal Omega
-#     result = get_alignment(my_file, args)
-#     if result is None:
-#         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}")
-#         return None
+    try:
+        start_time = time.time()
+        subprocess.run(clustalo_call, check=True)
+        elapsed = time.time() - start_time
+        eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s")
+        return output_file # success run
     
-#     eprint(f"[Worker {workerid}/{total_workers}] Successfully processed {my_file}")
-#     return result
+    except subprocess.CalledProcessError as e:
+        eprint(f"Error during alignment of {input_file}: {e}")
+        eprint(f"Command: {' '.join(clustalo_call)}")
+        eprint(f"Exit Code: {e.returncode}")
+        eprint(f"Error Output: {e.stderr}")
+        #raise
+        return False  # Return failure flag
+    #return output_file
+
+
 def worker_process(my_file, args, total_workers):
     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
     eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
@@ -309,7 +269,8 @@ def worker_process(my_file, args, total_workers):
 
     except Exception as e:
         eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-        return None
+        #return None
+        return False
 
     try:
         return get_alignment(my_file, args)
@@ -317,13 +278,21 @@ def worker_process(my_file, args, total_workers):
         eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
         return None
 
+    # Call Clustal Omega
+    success = get_alignment(my_file, args)
+    if not success:
+        eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}")
+    else:
+        eprint(f"[Worker {workerid}/{total_workers}] Successfully processed {my_file}")
+    return success    
+
+
 
 def main():
     initial_secs = time.time()  # For total time count
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     eprint(f" .-- BEGUN {timestamp} --.")
-    
     args = check_args()  # Parse command line arguments
 
     # Determine input mode and validate
@@ -331,76 +300,47 @@ def main():
         eprint(f" |-- Input mode: Directory ({args.input_fasta_dir})")
         fasta_files = glob.glob(os.path.join(args.input_fasta_dir, f"*{args.extension}"))
         eprint(f" |-- Found {len(fasta_files)} FASTA files in directory.")
-
-        if args.threads > 1:
-            with Pool(args.threads) as pool:
-                results = list(tqdm(
-                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                    #pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                    desc="Processing files in parallel",
-                    total=len(fasta_files),
-                    #unit="file"
-                ))
-            eprint(f" |-- Processed {len(results)} files.")
-            output_stats(initial_secs)
-
-        # else:            
-        #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
-        #         worker_process(fasta_file, args, total_workers=1)
-                    
-        else:
-            results = list(tqdm(
-                (worker_process(fasta_file, args, total_workers=1) for fasta_file in fasta_files),
-                total=len(fasta_files),
-                desc="Processing files",
-                #unit="file"
-                ))
-        #output_stats(initial_secs)
-        
     elif args.input_fasta_list:
         eprint(f" |-- Input mode: File List ({args.input_fasta_list})")
-        
-        # Read the list of FASTA files from the provided file
         with open(args.input_fasta_list, 'r') as f:
-            fasta_files = [line.strip() for line in f if line.strip()]  # Read lines and strip whitespace
-
+            fasta_files = [line.strip() for line in f if line.strip()]
         eprint(f" |-- Found {len(fasta_files)} FASTA files listed in {args.input_fasta_list}.")
-
-        if args.threads > 1:
-            with Pool(args.threads) as pool:
-                results = list(tqdm(
-                    pool.starmap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                   #pool.imap(worker_process, [(fasta_file, args, args.threads) for fasta_file in fasta_files]),
-                    desc="Processing files in parallel",
-                    total=len(fasta_files),
-                    #unit="file"
-
-                ))
-            eprint(f" |-- Processed {len(results)} files.")
-            output_stats(initial_secs)
-
-        # else:
-        #     for fasta_file in tqdm(fasta_files, desc="Processing files sequentially"):
-        #         worker_process(fasta_file, args, total_workers=1)
-        else:
-            results = list(tqdm(
-                (worker_process(fasta_file, args, total_workers=1) for fasta_file in fasta_files),
-                total=len(fasta_files),
-                desc="Processing files",
-                #unit="file"
-                ))                
-        #output_stats(initial_secs)
-
     else:
         exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
 
-    # end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    # total_elapsed_time = elapsed_time(initial_secs)
-    # #FIXME: should not print if there is any error right? Not sure!
-    # eprint(" '-- Processing complete --'")
-    # eprint(f" |-- END TIME: {end_time}")
-    # eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
-    
+    # Track success of all workers
+    all_successful = True
+
+    if args.threads > 1:
+        with Pool(args.threads) as pool:
+            results = list(tqdm(
+                pool.starmap(worker_process, [(f, args, args.threads) for f in fasta_files]),
+                desc="Processing files in parallel",
+                total=len(fasta_files),
+            ))
+        all_successful = all(results)
+    else:
+        results = list(tqdm(
+            (worker_process(f, args, total_workers=1) for f in fasta_files),
+            total=len(fasta_files),
+            desc="Processing files sequentially",
+        ))
+        all_successful = all(results)
+
+    # Only print stats if all files succeeded
+    if all_successful:
+        output_time(start_time=initial_secs)
+        # end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        # total_elapsed_time = elapsed_time(initial_secs)
+        # eprint(" '-- Processing complete --'")
+        # eprint(f" |-- END TIME: {end_time}")
+        # eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
+        
+    else:
+        eprint(" |-- ERROR: One or more files failed to process. Skipping stats.")
+
+
+
     
 
 
