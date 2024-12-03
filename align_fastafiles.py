@@ -79,6 +79,23 @@ def eprint(*myargs, **kwargs):
     print(*myargs, file=sys.stderr, **kwargs)
 
 
+def delete_files(filenames: List[str], path: Optional[str] = None):
+    """
+    Deletes specified temporary files.
+
+    Args:
+        filenames (List[str]): List of filenames to delete.
+        path (Optional[str]): Optional base directory to prepend to each filename.
+
+    Returns:
+        None
+    """
+    for filename in filenames:
+        if path is not None:
+            filename = os.path.join(path, filename)
+        if os.path.isfile(filename):
+            os.remove(filename)
+
 def check_args():
     """
     Parse arguments and check for error conditions.
@@ -287,37 +304,44 @@ def initializer(args_arg):
 
 
 def worker_process(my_file):
-    """[docstring here]"""
+    """
+    Process a single file for alignment and optionally write sequence statistics.
+    TODO: Add more
+    """
     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
     #eprint(f"[Worker {workerid}/{args.threads}] Processing {my_file}") #debug
-
+    
+    tmpstat_filename = f"tmpstat{workerid}"
+    tmpstat_content = []
+    
     if args.sequence_stats != "none":
         try:
             stats = get_sequence_statistics(my_file)
             #with open(f"tmpstat{workerid}", 'a') as statfh:
                 #statfh.write(....)
             if args.sequence_stats == "basic":
-                eprint(f"Total sequences: {stats['total_sequences']}")
-                eprint(f"Minimum length: {stats['min_length']}")
-                eprint(f"Maximum length: {stats['max_length']}")
-                eprint(f"Average length: {stats['avg_length']:.2f}")
+                tmpstat_content.append(f"File: {my_file}\n")
+                tmpstat_content.append(f"Total sequences: {stats['total_sequences']}\n")
+                tmpstat_content.append(f"Minimum length: {stats['min_length']}\n")
+                tmpstat_content.append(f"Maximum length: {stats['max_length']}\n")
+                tmpstat_content.append(f"Average length: {stats['avg_length']:.2f}\n")
             elif args.sequence_stats == "detailed":
-                eprint(f"Total sequences: {stats['total_sequences']}")
-                eprint(f"Minimum length: {stats['min_length']}")
-                eprint(f"Maximum length: {stats['max_length']}")
-                eprint(f"Average length: {stats['avg_length']:.2f}")
-                eprint(f"Individual sequence lengths: {stats['sequence_lengths']}")
+                tmpstat_content.append(f"File: {my_file}\n")
+                tmpstat_content.append(f"Total sequences: {stats['total_sequences']}\n")
+                tmpstat_content.append(f"Minimum length: {stats['min_length']}\n")
+                tmpstat_content.append(f"Maximum length: {stats['max_length']}\n")
+                tmpstat_content.append(f"Average length: {stats['avg_length']:.2f}\n")
+                tmpstat_content.append(f"Individual sequence lengths: {stats['sequence_lengths']}\n")
+
+            with open(tmpstat_filename, 'a') as statfh:
+                statfh.writelines(tmpstat_content)
+
         except Exception as e:
             eprint(f"[Worker {workerid}/{args.threads}] Failed to read {my_file}: {e}")
-            #return None
             return False
 
-    try:
-        return get_alignment(my_file, args)
-    except Exception as e:
-        eprint(f"[Worker {workerid}/{args.threads}] Failed to process {my_file}: {e}")
-        return 0
-
+    # Directly return the result of get_alignment
+    return get_alignment(my_file, args)    
 
 if __name__ == "__main__":
     initial_secs = time.time()  # For total time count
@@ -341,6 +365,8 @@ if __name__ == "__main__":
 
     fasta_files_count = len(fasta_files)
     results = []
+    
+    tempstat_files = [f"tmpstat{workerid}" for workerid in range(args.threads)]
     with Pool(processes=args.threads, initializer=initializer, initargs=(args,)) as pool:
         for result in tqdm(
             pool.imap_unordered(worker_process, fasta_files),
@@ -357,7 +383,16 @@ if __name__ == "__main__":
     #     with open(tempstatfile, 'r') as statfh:
     #         finalstatsfh.write(statfh.read())
     #delete_files(tempstatfiles)
-
+    
+    if args.sequence_stats != "none":
+        final_stats_file = os.path.join(args.out_dir, "final_stats.txt")
+        with open(final_stats_file, 'w') as finalstatsfh:
+            for tempstat_file in tempstat_files:
+                if os.path.exists(tempstat_file):
+                    with open(tempstat_file, 'r') as statfh:
+                        finalstatsfh.write(statfh.read())
+        delete_files(tempstat_files)
+        
     # Only print stats if all files succeeded
     if successful_count != fasta_files_count:
         eprint(f" |-- ERROR: {fasta_files_count - successful_count} file(s) failed to process.")
