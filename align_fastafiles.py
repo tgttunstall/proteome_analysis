@@ -5,10 +5,9 @@ Created on Fri Nov 29 14:16:53 2024
 
 @author: tanu
 """
-#!/usr/bin/env python3
 import os
 import argparse
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool, current_process, cpu_count
 import subprocess
 import glob
 import time
@@ -16,48 +15,69 @@ import sys
 from typing import List, Optional
 from tqdm import tqdm
 
-#from ffdb import split_file  # Importing split_file from ffdb
-from ffdb import *
-
 ################
 BUFFERSIZE = 1048576  # 1Mb
 DESCRIPTION = """
 Script to parallelise clustal omega alignments
+[a little more documentation, example calls, etc]
 """
 
 #################
 # Clustal Omega configuration
 CLUSTALO_EXE = "clustalo"  # Path or name of Clustal Omega executable
 
-# Helper Functions
 
+# Helper Functions
 def secs2time(secs):
     """Converts a time duration in seconds to a human-readable format (hours, minutes, seconds)."""
     minutes, seconds = divmod(secs, 60)
     hours, minutes = divmod(minutes, 60)
     return "{:02.0f}h {:02.0f}m {:02.0f}s".format(hours, minutes, seconds)
 
-def elapsed_time(start_time):
-    """Computes the elapsed time from a given start time in seconds and returns a formatted string."""
+
+def elapsed_time(start_time, work_done=None, invert=False):
+    """
+    Computes the elapsed time from a given start time in seconds and returns a formatted string.
+    If `work_done` is specified, also computes the speed of the process.
+
+    Args:
+        start_time (float): The start time in seconds (from time.time()).
+        work_done (int, optional): Number of completed iterations or tasks.
+
+    Returns:
+        str or tuple: A formatted string with elapsed time if `work_done` is None,
+                      otherwise a tuple with formatted elapsed time and computed speed in "it/s".
+
+    Example:
+        start_secs = time.time()
+        time.sleep(2)
+        print(" '-- Elapsed: {} --'".format(elapsed_time(start_secs)))
+        # Output example: " '-- Elapsed: 00h 00m 02s --'"
+
+        iterations_done = 10
+        print(" '-- Elapsed: {}, {} it/s --'".format(*elapsed_time(start_secs, iterations_done)))
+        # Output example: " '-- Elapsed: 00h 00m 02s, 5.0 it/s --'"
+    """
     process_time = time.time() - start_time
-    return secs2time(process_time)
+    if work_done is None:
+        return secs2time(process_time)
+    if invert:
+        process_speed = round(process_time / work_done, 2)
+    else:
+        process_speed = round(work_done / process_time, 2)
+    return secs2time(process_time), process_speed
+
 
 def exit_with_error(message: str, code: int = 1):
     """Prints an error message to stderr and exits the program with the specified exit code."""
     eprint(f" => {message}")
     sys.exit(code)
 
+
 def eprint(*myargs, **kwargs):
     """Prints the provided arguments to stderr."""
     print(*myargs, file=sys.stderr, **kwargs)
 
-
-def output_time(start_time):
-    end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    total_elapsed_time = elapsed_time(start_time)
-    eprint(" '-- Processing complete --'")
-    eprint(f" |-- END TIME: {end_time}")
-    eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")    
 
 def check_args():
     """
@@ -104,54 +124,54 @@ def check_args():
     #==================================
     # General script-level arguments
     #==================================
-    
+
     # General input options
     input_group = parser.add_argument_group("Input Options (choose one)")
-    input_group.add_argument("-d", "--input_fasta_dir", type=str, required=False,
-        help="Directory containing all proteome .fa files.")
-    input_group.add_argument("-f", "--input_fasta_list", type=is_valid_file, required=False,
-        help="Path to a text file containing a list of FASTA files.")
-         
+    exclusive_group = input_group.add_mutually_exclusive_group(required=True)
+    exclusive_group.add_argument("-d", "--fasta_dir", type=str, required=False,
+                                 dest="input_fasta_dir",
+                                 help="Directory containing fasta files to be aligned.")
+    exclusive_group.add_argument("-l", "--fasta_list", type=is_valid_file, required=False,
+                                 dest="input_fasta_list",
+                                 help="Path to a text file containing a list of FASTA files.")
+
     # General options
     parser.add_argument("-t", "--threads", type=positive_integer, default=1,
-        help="Number of threads for parallel processing.")
+                        help="Number of threads for parallel processing.")
     parser.add_argument("-e", "--extension", type=str, default=".fa",
-        help="File extension for FASTA files (default: .fa).")
+                        help="File extension for FASTA files (default: .fa).")
 
     parser.add_argument("--sequence_stats", choices=["none", "basic", "detailed"], default="none",
-                    help="Level of sequence statistics to report (none, basic, or detailed)")
-    # parser.add_argument("-d", "--input_fasta_dir", type=str, required=False,
-    #     help="Directory containing all proteome .fa files.")
-
-    # parser.add_argument("-f", "--input_fasta_list", type=is_valid_file, required=False,
-    #     help="Path to a text file containing a list of FASTA files.")  
+                        help="Level of sequence statistics to report (none, basic, or detailed)")
 
     #==================================
     # Clustal Omega-specific arguments
     #==================================
 
     clustalo_group = parser.add_argument_group("Clustal Omega specific arguments")
-    
+
     clustalo_group.add_argument("-o", "--out_dir", type=str, required=True,
-        help="Output directory for aligned files.")
+                                help="Output directory for aligned files.")
 
     clustalo_group.add_argument("-at", "--align_threads", type=positive_integer, default=1,
-        help="Number of threads for Clustal Omega.")
+                                help="Number of threads for Clustal Omega.")
 
-    clustalo_group.add_argument("--force", action="store_true",
-        help="Force overwrite of existing output files.")
+    clustalo_group.add_argument("-f", "--force", action="store_true",
+                                help="Force overwrite of existing output files.")
 
-    clustalo_group.add_argument("--seqtype", type=str, choices=["Protein", "DNA"], default="Protein",
-        help="Specify the sequence type (e.g., 'Protein' or 'DNA').")
-    
-    clustalo_group.add_argument("--outfmt", type=str, choices=["fa","clu","msf","phy","selex","st","vie"], default="fa",
-        help="Specify the MSA output format.")
+    clustalo_group.add_argument("-st", "--seqtype", type=str, choices=["Protein", "DNA"],
+                                default="Protein",
+                                help="Specify the sequence type (e.g., 'Protein' or 'DNA').")
+
+    clustalo_group.add_argument("-of", "--outfmt", type=str,
+                                choices=["fa","clu","msf","phy","selex","st","vie"], default="fa",
+                                help="Specify the MSA output format.")
 
     args = parser.parse_args()
 
     # Validate input arguments
-    if args.input_fasta_dir and args.input_fasta_list:
-        exit_with_error("ERROR: Please specify either --input_fasta_dir or --input_fasta_list, not both.", 1)
+    #if args.input_fasta_dir and args.input_fasta_list:
+    #   exit_with_error("ERROR: Please specify either --input_fasta_dir or --input_fasta_list, not both.", 1)
 
     if args.input_fasta_dir and not os.path.isdir(args.input_fasta_dir):
         exit_with_error(f"ERROR: No such directory '{args.input_fasta_dir}'", 2)
@@ -167,18 +187,18 @@ def check_args():
             exit_with_error(f"ERROR: Cannot create directory '{args.out_dir}'", 1)
 
     eprint(f" |-- Output directory: {args.out_dir}")
-        
+
     #args = parser.parse_args()
 
-    if args.threads > 1 and args.input_fasta_list:
-        args.chunksize = calculate_blocksize(args.input_fasta_list, args.threads)
-        eprint(
-            f" |-- threads: {args.threads}; input file will be split in chunks of max {args.chunksize} bytes"
-        )
+    if args.threads > cpu_count():
+        args.threads = cpu_count()
+        eprint(f" |-- WARNING: only {args.threads} threads available")
 
     return args
 
+
 def get_sequence_statistics(fasta_file):
+    """[docstring here]"""
     sequence_count = 0
     lengths = []
 
@@ -205,6 +225,7 @@ def get_sequence_statistics(fasta_file):
         "sequence_lengths": lengths
     }
 
+
 def get_alignment(input_file, args):
     """
     Align sequences using Clustal Omega and write to the output file.
@@ -212,6 +233,10 @@ def get_alignment(input_file, args):
     # Derive the output file path from args.out_dir
     base_name = os.path.splitext(os.path.basename(input_file))[0]
     output_file = os.path.join(args.out_dir, f"{base_name}.aln")
+
+    if not os.path.isfile(input_file):
+        eprint(f" |-- ERROR: no such file {input_file}")
+        return 0
 
     # Construct Clustal Omega command
     clustalo_call = [
@@ -223,72 +248,78 @@ def get_alignment(input_file, args):
         "--seqtype", args.seqtype,
     ]
 
-    # Add --force if specified
-    if args.force:
-        clustalo_call.append("--force")
+    if os.path.isfile(output_file):
+        if args.force:
+            clustalo_call.append("--force")
+        else:
+            eprint(f" |-- WARNING: Cowardly refusing to overwrite already existing file '{output_file}'. Use --force to force overwriting.")
+            return 0
 
     # Log the command and the number of threads being used
     #eprint(f"\nForce overwrite enabled: {args.force}")
-    eprint(f"Using {args.align_threads} thread(s) for Clustal Omega")
-    eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}")
-    
+
+    #eprint(f"Using {args.align_threads} thread(s) for Clustal Omega") #debug
+    #eprint(f"\nRunning Clustal Omega with command:\n {' '.join(clustalo_call)}") #debug
+
     try:
-        start_time = time.time()
+        #start_time = time.time()
         subprocess.run(clustalo_call, check=True)
-        elapsed = time.time() - start_time
-        eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s")
-        return output_file # success run
-    
+        #elapsed = time.time() - start_time
+        #eprint(f"Processed {input_file} -> {output_file} in {elapsed:.2f}s") #debug
+        return 1 # success run
+
     except subprocess.CalledProcessError as e:
-        eprint(f"Error during alignment of {input_file}: {e}")
+        eprint(f"Error during alignment of {input_file}")
         eprint(f"Command: {' '.join(clustalo_call)}")
         eprint(f"Exit Code: {e.returncode}")
         eprint(f"Error Output: {e.stderr}")
         #raise
-        return False  # Return failure flag
+        return 0 # Return failure flag
     #return output_file
 
 
-def worker_process(my_file, args, total_workers):
+def initializer(args_arg):
+    """
+    initializer to set global variables for workers
+    """
+    global args
+    args = args_arg
+
+
+def worker_process(my_file):
+    """[docstring here]"""
     workerid = int(current_process().name.split("-")[1]) - 1  # Worker ID for debugging
-    eprint(f"[Worker {workerid}/{total_workers}] Processing {my_file}")
+    #eprint(f"[Worker {workerid}/{args.threads}] Processing {my_file}") #debug
 
-    try:
-        stats = get_sequence_statistics(my_file)
-        if args.sequence_stats == "basic":
-            eprint(f"Total sequences: {stats['total_sequences']}")
-            eprint(f"Minimum length: {stats['min_length']}")
-            eprint(f"Maximum length: {stats['max_length']}")
-            eprint(f"Average length: {stats['avg_length']:.2f}")
-        elif args.sequence_stats == "detailed":
-            eprint(f"Total sequences: {stats['total_sequences']}")
-            eprint(f"Minimum length: {stats['min_length']}")
-            eprint(f"Maximum length: {stats['max_length']}")
-            eprint(f"Average length: {stats['avg_length']:.2f}")
-            eprint(f"Individual sequence lengths: {stats['sequence_lengths']}")
-
-    except Exception as e:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to read {my_file}: {e}")
-        #return None
-        return False
+    if args.sequence_stats != "none":
+        try:
+            stats = get_sequence_statistics(my_file)
+            #with open(f"tmpstat{workerid}", 'a') as statfh:
+                #statfh.write(....)
+            if args.sequence_stats == "basic":
+                eprint(f"Total sequences: {stats['total_sequences']}")
+                eprint(f"Minimum length: {stats['min_length']}")
+                eprint(f"Maximum length: {stats['max_length']}")
+                eprint(f"Average length: {stats['avg_length']:.2f}")
+            elif args.sequence_stats == "detailed":
+                eprint(f"Total sequences: {stats['total_sequences']}")
+                eprint(f"Minimum length: {stats['min_length']}")
+                eprint(f"Maximum length: {stats['max_length']}")
+                eprint(f"Average length: {stats['avg_length']:.2f}")
+                eprint(f"Individual sequence lengths: {stats['sequence_lengths']}")
+        except Exception as e:
+            eprint(f"[Worker {workerid}/{args.threads}] Failed to read {my_file}: {e}")
+            #return None
+            return False
 
     try:
         return get_alignment(my_file, args)
     except Exception as e:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}: {e}")
-        return None
-
-    # Call Clustal Omega
-    success = get_alignment(my_file, args)
-    if not success:
-        eprint(f"[Worker {workerid}/{total_workers}] Failed to process {my_file}")
-    else:
-        eprint(f"[Worker {workerid}/{total_workers}] Successfully processed {my_file}")
-    return success    
+        eprint(f"[Worker {workerid}/{args.threads}] Failed to process {my_file}: {e}")
+        return 0
 
 
-
-def main():
+if __name__ == "__main__":
     initial_secs = time.time()  # For total time count
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
@@ -308,36 +339,32 @@ def main():
     else:
         exit_with_error("ERROR: No valid input specified. Please provide either --input_fasta_dir or --input_fasta_list.", 1)
 
-    # Track success of all workers
-    all_successful = True
+    fasta_files_count = len(fasta_files)
+    results = []
+    with Pool(processes=args.threads, initializer=initializer, initargs=(args,)) as pool:
+        for result in tqdm(
+            pool.imap_unordered(worker_process, fasta_files),
+            desc="aligning",
+            total=fasta_files_count,
+        ):
+            results.append(result)
+    successful_count = sum(results)
 
-    if args.threads > 1:
-        with Pool(args.threads) as pool:
-            results = list(tqdm(
-                pool.starmap(worker_process, [(f, args, args.threads) for f in fasta_files]),
-                desc="Processing files in parallel",
-                total=len(fasta_files),
-            ))
-        all_successful = all(results)
-    else:
-        results = list(tqdm(
-            (worker_process(f, args, total_workers=1) for f in fasta_files),
-            total=len(fasta_files),
-            desc="Processing files sequentially",
-        ))
-        all_successful = all(results)
+    #if args.stats....
+    #tempstatfiles = [tmpstat + workerid for workerid in range(args.threads)]
+    #with open(final_stat_file, 'w') as finalstatsfh:
+    #     for tempstatfile in tempstatfiles:
+    #     with open(tempstatfile, 'r') as statfh:
+    #         finalstatsfh.write(statfh.read())
+    #delete_files(tempstatfiles)
 
     # Only print stats if all files succeeded
-    if all_successful:
-        output_time(start_time=initial_secs)
-        # end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        # total_elapsed_time = elapsed_time(initial_secs)
-        # eprint(" '-- Processing complete --'")
-        # eprint(f" |-- END TIME: {end_time}")
-        # eprint(f" |-- TOTAL ELAPSED TIME: {total_elapsed_time}")
-        
+    if successful_count != fasta_files_count:
+        eprint(f" |-- ERROR: {fasta_files_count - successful_count} file(s) failed to process.")
+
+    if successful_count == 0:
+        eprint(" |-- ERROR: no alignment created")
     else:
-        eprint(" |-- ERROR: One or more files failed to process.")
-   
-if __name__ == "__main__":
-    main()
+        eprint("|-- {} alignments completed -- Elapsed: {}, {} s/alignment --".format(successful_count, *elapsed_time(initial_secs + 1E-10, successful_count, invert=True),))
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    eprint(f" '-- ENDED {timestamp} --'")
