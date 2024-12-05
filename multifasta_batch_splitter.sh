@@ -1,16 +1,5 @@
 #!/bin/bash
-#input_fasta="/home/pub/Work/data_arise_proteome/ggcaller/gene_calls.faa""
-#num_files=2  # Number of output files to create
-#
-## Count the number of sequences (header lines starting with ">")
-#total_seqs=$(grep -c "^>" $input_fasta)
-#seqs_per_file=$(( (total_seqs + num_files - 1) / num_files )) # Ceiling division
-#
-## Split the file
-#awk -v n=$seqs_per_file -v prefix="split_" '
-#  /^>/ { if (count % n == 0) file = prefix ++file_idx ".fasta"; count++ }
-#  { print >> file }
-#' $input_fasta
+#!/bin/bash
 
 # Usage function
 usage() {
@@ -44,15 +33,36 @@ mkdir -p "$output_dir" || { echo "Error: Cannot create output directory $output_
 
 # Count the number of sequences (header lines starting with ">")
 total_seqs=$(grep -c "^>" "$input_fasta")
+if [[ $total_seqs -eq 0 ]]; then
+    echo "Error: No sequences found in $input_fasta."
+    exit 1
+fi
+echo "Total sequences found: $total_seqs"
+
 seqs_per_file=$(( (total_seqs + num_files - 1) / num_files )) # Ceiling division
+echo "Splitting into $num_files files with approximately $seqs_per_file sequences per file."
 
 # Split the file
-awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" '
+awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" -v total="$total_seqs" '
+    BEGIN { file_idx = 1; count = 0; print "Starting split..."; }
     /^>/ {
-        if (count % n == 0) file = prefix file_idx++ ".fasta"; 
+        if (count % n == 0) {
+            if (count > 0) {
+                close(file);
+                printf "File %s written with %d sequences.\n", file, n;
+            }
+            file = prefix file_idx++ ".fasta";
+        }
         count++;
+        if (count % 100 == 0 || count == total) {
+            printf "Progress: %d/%d sequences processed...\n", count, total > "/dev/stderr";
+        }
     }
     { print >> file }
+    END {
+        printf "Finished splitting into %d files.\n", file_idx - 1;
+    }
 ' "$input_fasta"
 
 echo "Split completed. Files are saved in $output_dir"
+
