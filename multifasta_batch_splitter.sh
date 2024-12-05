@@ -1,18 +1,22 @@
 #!/bin/bash
-#!/bin/bash
-
 # Usage function
 usage() {
-    echo "Usage: $0 -i <input_fasta> -n <num_files> -o <output_dir>"
+    echo "Usage: $0 -i <input_fasta> -n <num_files> -o <output_dir> [-p]"
+    echo "  -i: Input multi-FASTA file"
+    echo "  -n: Number of output files"
+    echo "  -o: Output directory"
+    echo "  -p: Enable progress reporting (optional)"
     exit 1
 }
 
 # Parse command-line arguments
-while getopts "i:n:o:" opt; do
+progress=false
+while getopts "i:n:o:p" opt; do
     case $opt in
         i) input_fasta="$OPTARG" ;;
         n) num_files="$OPTARG" ;;
         o) output_dir="$OPTARG" ;;
+        p) progress=true ;;
         *) usage ;;
     esac
 done
@@ -42,31 +46,28 @@ echo "Total sequences found: $total_seqs"
 seqs_per_file=$(( (total_seqs + num_files - 1) / num_files )) # Ceiling division
 echo "Splitting into $num_files files with approximately $seqs_per_file sequences per file."
 
-outfname=$(basename ${input_fasta})
-outfname=${outfname}_split_
-
-# Split the file
-#awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" -v total="$total_seqs" '
-awk -v n="$seqs_per_file" -v prefix="${output_dir}/${outfname}" -v total="$total_seqs" '
+outfname=$(basename ${input_fasta})                                                                 
+outfname=${outfname}_split_                                                                         
+                                                                                                     
+# Split the file                                                                                    
+#awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" -v total="$total_seqs" -v progress="$progress" '
+awk -v n="$seqs_per_file" -v prefix="${output_dir}/${outfname}" -v total="$total_seqs" -v progress="$progress" '
     BEGIN { file_idx = 1; count = 0; print "Starting split..."; }
-    /^>/ {
+    /^>/ { 
         if (count % n == 0) {
-            if (count > 0) {
-                close(file);
-                printf "File %s written with %d sequences.\n", file, n;
-            }
-            file = prefix file_idx++ ".fasta";
+            if (count > 0) close(file);
+            file = prefix file_idx++ ".fasta"; 
+            printf "Creating file: %s\n", file > "/dev/stderr";
         }
         count++;
-        if (count % 100 == 0 || count == total) {
+        if (progress == "true" && (count % 100 == 0 || count == total)) {
             printf "Progress: %d/%d sequences processed...\n", count, total > "/dev/stderr";
         }
     }
     { print >> file }
     END {
-        printf "Finished splitting into %d files.\n", file_idx - 1;
+        printf "Finished splitting into %d files.\n", file_idx - 1 > "/dev/stderr";
     }
 ' "$input_fasta"
 
 echo "Split completed. Files are saved in $output_dir"
-
