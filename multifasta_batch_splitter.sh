@@ -42,8 +42,12 @@ echo "Total sequences found: $total_seqs"
 seqs_per_file=$(( (total_seqs + num_files - 1) / num_files )) # Ceiling division
 echo "Splitting into $num_files files with approximately $seqs_per_file sequences per file."
 
+outfname=$(basename ${input_fasta})
+outfname=${outfname}_split_
+
 # Split the file
-awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" -v total="$total_seqs" '
+#awk -v n="$seqs_per_file" -v prefix="$output_dir/split_" -v total="$total_seqs" '
+awk -v n="$seqs_per_file" -v prefix="${output_dir}/${outfname}" -v total="$total_seqs" '
     BEGIN { file_idx = 1; count = 0; print "Starting split..."; }
     /^>/ {
         if (count % n == 0) {
