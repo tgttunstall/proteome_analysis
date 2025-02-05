@@ -392,6 +392,7 @@ if __name__ == "__main__":
                     with open(tempstat_file, 'r') as statfh:
                         finalstatsfh.write(statfh.read())
         delete_files(tempstat_files)
+        eprint(f"Final sequence stats written to {final_stat_file}")
         
     # Only print stats if all files succeeded
     if successful_count != fasta_files_count:
