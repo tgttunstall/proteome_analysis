@@ -1,0 +1,26 @@
+Retrieve a list of proteome ids from sql query into a file:
+- spneumo_proteomeids.out 
+SQL query files:
+- spneumo_proteomeids.sql
+- spneumo_biosample_info.sh
+
+NOTE: Also ran a separate query to get the proteome ids along with the biosample ids 
+- spneumo_biosample_info.out
+
+NOTE: other files
+- spneumo_biosample_info.out        
+- spneumo_proteomeids.out        
+- spneumo_proteomeids_public.out 
+
+Data on on the cluster is in: /
+/nfs/research/martin/uniprot/research/spneumo_dataset$ 
+
+and temp scripts in;
+/nfs/research/martin/uniprot/research/spneumo_analysis
+But these should reside in ~/git/arise_proteome
+
+####
+1: check coverage
+####
+ATB dataset vs UP dataset
+
