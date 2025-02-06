@@ -2,3 +2,5 @@ scratch/
 scratch.txt
 .log
 *.ini
+del*/
+DEL*/
