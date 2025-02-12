@@ -35,7 +35,7 @@ def find_proteome_id(protein_name, proteomeDict):
     Returns a string with the format 'protein_name_proteomeID' for a given protein name.
     If the protein is not found in proteomeDict, returns 'protein_name_XXX'.
     """
-    proteome_id = proteomeDict.get(protein_name, "XXX")
+    proteome_id = proteomeDict.get(protein_name, "")
     return f"{protein_name}_{proteome_id}"
 
 

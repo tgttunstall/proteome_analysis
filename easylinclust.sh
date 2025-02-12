@@ -11,7 +11,7 @@ set -u
 #CONSTANTS and SETTINGS
 #paths:
 BIGFASTAPATH=$WUP/temp/mmseqs/fasta #path where to store concatenated proteome fasta files
-MMSEQS_EXEC="./mmseqs" #path to mmseqs executable
+#MMSEQS_EXEC="./mmseqs" #path to mmseqs executable
 MMSEQS_EXEC="/hps/software/users/jlees/tanushree/MMseqs2/build/bin/mmseqs"
 
 #parameters for clustering:
@@ -47,7 +47,7 @@ while getopts ":hd:e:m:c:p:" opt; do
     d)
       fasta_path="$OPTARG"
       ;;
-    d)
+    e)
       if [[ $OPTARG = -* ]]; then
           >&2 echo "   ERROR: -${opt} option requires a value"
           exit 22

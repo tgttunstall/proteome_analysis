@@ -1,3 +1,5 @@
+#!bin/env python
+import sys, os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,23 +29,37 @@ import random
 #####
 # R2
 #####
-import os,sys
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
 
 homedir = os.path.expanduser("~")
+#basedir =  homedir + "/Documents/arise/spneumo_dataset"
+basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+
 # Load TSV files
-up_file = homedir + "/Documents/arise/spneumo_dataset/up_pcounts.tsv"
-atb_file = homedir + "/Documents/arise/spneumo_dataset/atb_pcounts.tsv"
+#up_file = basedir + "/up_pcounts.tsv"
+up_file = basedir + "/spneumo_biosample_info.out"
+atb_file = basedir + "/atb_pcounts.tsv"
 
 # Read the data
-df_up = pd.read_csv(up_file, sep="\t")
+#df_up = pd.read_csv(up_file, sep="\t")
+df_up = pd.read_csv(up_file, sep="\t", usecols = ['biosample', 'protein_count'])
 df_atb = pd.read_csv(atb_file, sep="\t")
 
+# sanity check: Drop duplicated, and data with protein count == 0
+
+df_up2 = df_up[df_up['protein_count'] > 0]
+df_atb2 = df_atb[df_atb['protein_count'] > 0]
+
+df_up2 = df_up.drop_duplicates(subset = 'biosample', keep = 'last')
+df_up_dups = df_up[df_up.duplicated(subset='biosample')]
+
+df_atb_dups = df_atb[df_atb.duplicated(subset = 'biosample')]
+df_atb2 = df_atb.drop_duplicates(subset=['biosample'], keep = 'last')
+
+
 # Merge data on 'biosample' to see coverage
-df_merged = pd.merge(df_up, df_atb, on="biosample", how="outer", suffixes=("_up", "_atb"))
+#df_merged = pd.merge(df_up, df_atb, on="biosample", how="outer", suffixes=("_up", "_atb"))
+df_merged = pd.merge(df_up2, df_atb2, on="biosample", how="outer", suffixes=("_up", "_atb"))
+
 
 # Replace NaN with 0 (if a biosample is missing in one dataset)
 df_merged.fillna(0, inplace=True)
@@ -66,84 +82,205 @@ plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 plt.show()
 
-
-
-# diff type of plot
-# Prepare stacked bar plot
+###############################################################################
+#===========
+# Bar plot
+#===========
 categories = ["Only UP", "Only ATB", "Both"]
 counts = [len(only_up), len(only_atb), len(both_sources)]
 
 # Plot
-plt.figure(figsize=(8, 5))
+plt.figure(figsize=(8, 7))
 plt.bar(categories, counts, color=["blue", "red", "green"], alpha=0.7)
 
 # Labels & Title
-plt.xlabel("Data Source Coverage")
-plt.ylabel("Number of Biosamples")
-plt.title("Comparison of Protein Coverage in UP and ATB")
+plt.xlabel("Data Sources")
+plt.ylabel("Number of Proteomes")
+plt.title("Comparison of Proteome counts by Biosample in UP and ATB")
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 
 # Annotate counts
 for i, v in enumerate(counts):
-    plt.text(i, v + max(counts) * 0.02, str(v), ha="center", fontsize=12)
+    plt.text(i, v + max(counts) * 0.02, str(v), ha="center", fontsize=14)
 
 plt.show()
 
+###############################################################################
+#================================================
+# Stacked bar plot with total for each category
+#================================================
+categories = ["UP", "UP+ATB", "ATB"]
+total_counts = [len(only_up) + len(both_sources),  # Total UP
+                len(only_up) + len(only_atb) + len(both_sources),# Total UP+ATB
+                len(only_atb) + len(both_sources)] # Total ATB]  
+subset_counts = [len(only_up), len(both_sources), len(only_atb)]  # Stacked portion
 
-# diff plot version 2:
-# Total dataset sizes
-total_up = len(df_up)
-total_atb = len(df_atb)
+# Plot
+plt.figure(figsize=(8, 7))
+bar_width = 0.6
 
-# Values for stacked bar chart
-up_values = [len(only_up), len(both_sources)]  # UP breakdown (Only UP, Both)
-#atb_values = [len(only_atb), len(both_sources)]  # ATB breakdown (Only ATB, Both)
+# Base bars (lighter colors, transparent)
+#plt.bar(categories, total_counts, color=["lightblue", "lightgreen", "lightcoral"], alpha=0.5, label="Total", width=bar_width)
+plt.bar(categories, total_counts, color=["lightgrey", "lightgrey", "lightgrey"], 
+        alpha=0.5
+        , label="Total", 
+        width=bar_width)
 
-up_values = [len(only_up), len(total_up)]  # UP breakdown (Only UP, Both)
-atb_values = [len(only_atb), len(total_atb)]  # ATB breakdown (Only ATB, Both)
-
-
-# Plot stacked bar chart
-fig, ax = plt.subplots(figsize=(8, 6))
-
-bar_width = 0.4  # Bar width for better spacing
-x = np.arange(2)  # Two bars (UP and ATB)
-
-# Stacked bars
-ax.bar(x, [total_up, total_atb], color="lightgray", width=bar_width, label="Total")
-ax.bar(x, up_values, color="blue", width=bar_width, label="Only UP or Shared")
-ax.bar(x, atb_values, color="red", width=bar_width, bottom=up_values, label="Only ATB")
+# Overlay bars (darker, non-transparent for actual subset counts)
+plt.bar(categories, subset_counts, color=["blue", "green", "red"], 
+        alpha=1, 
+        label="Subset", 
+        width=bar_width)
 
 # Labels & Title
-ax.set_xticks(x)
-ax.set_xticklabels(["UP", "ATB"])
-ax.set_ylabel("Number of Biosamples")
-ax.set_title("Protein Coverage Breakdown in UP & ATB")
-ax.legend()
+plt.xlabel("Data Sources")
+plt.ylabel("Number of Proteomes")
+plt.title("Stacked Bar Plot of Proteome Counts in UP and ATB")
+plt.grid(axis="y", linestyle="--", alpha=0.5)
+
+# Annotate total and subset counts
+for i, (total, subset) in enumerate(zip(total_counts, subset_counts)):
+    plt.text(i, 
+             total + max(total_counts) * 0.008, 
+             str(total), 
+             ha="center", 
+             fontsize=12, 
+             color="black")
+    plt.text(i, 
+             subset / 2, 
+             str(subset), 
+             ha="center", 
+             fontsize=12, 
+             color="white", 
+             fontweight="bold")  # Centered inside subset bar
+
+plt.legend(["Total", "Exclusive"])
+plt.show()
+###############################################################################
+#======
+# Venn
+#======
+from matplotlib_venn import venn2
+
+# Define set sizes
+only_up_count = len(only_up)  # Unique to UP
+only_atb_count = len(only_atb)  # Unique to ATB
+both_count = len(both_sources)  # In both UP and ATB
+
+# Create Venn diagram
+plt.figure(figsize=(6, 6))
+venn = venn2(subsets=(only_up_count, 
+                      only_atb_count, 
+                      both_count), set_labels=("UP", "ATB"))
+
+# Customize text labels
+venn.get_label_by_id("10").set_text(f"{only_up_count}")  # Only UP
+venn.get_label_by_id("01").set_text(f"{only_atb_count}")  # Only ATB
+venn.get_label_by_id("11").set_text(f"{both_count}")  # Both UP & ATB
+
+# Add title
+plt.title("Comparing Proteomes/Biosamples in UP and ATB")
+plt.show()
+
+###############################################################################
+#===============
+# side by side: venn and BP
+#===============
+# Define set sizes
+only_up_count = len(only_up)  # Unique to UP
+only_atb_count = len(only_atb)  # Unique to ATB
+both_count = len(both_sources)  # In both UP and ATB
+
+# Define bar plot data
+categories = ["UP", "UP+ATB", "ATB"]
+total_counts = [only_up_count + both_count, 
+                only_up_count + only_atb_count + both_count,
+                only_atb_count + both_count]
+subset_counts = [only_up_count, both_count, only_atb_count]
+
+# Create subplots
+fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+# --- Venn Diagram ---
+venn = venn2(subsets=(only_up_count, only_atb_count, both_count), set_labels=("UP", "ATB"), ax=axes[0])
+
+# Customize Venn colors
+venn.get_patch_by_id("10").set_color("blue")
+venn.get_patch_by_id("01").set_color("red")
+venn.get_patch_by_id("11").set_color("green")
+
+# Annotate numbers
+venn.get_label_by_id("10").set_text(f"{only_up_count}")
+venn.get_label_by_id("01").set_text(f"{only_atb_count}")
+venn.get_label_by_id("11").set_text(f"{both_count}")
+
+axes[0].set_title("Comparing Proteomes/Biosamples in UP and ATB")
+
+# --- Stacked Bar Plot ---
+bar_width = 0.6
+
+# Base bars (lighter colors)
+axes[1].bar(categories, 
+            total_counts, 
+            #color=["lightblue", "lightcoral", "lightgreen"], 
+            color=["lightgrey", "lightgrey", "lightgrey"], 
+            alpha=0.5, 
+            width=bar_width, 
+            label="Total")
+
+# Overlay bars (darker colors for actual subset counts)
+axes[1].bar(categories, 
+            subset_counts, 
+            color=["blue", "green", "red"], 
+            alpha=1, 
+            width=bar_width, 
+            label="Subset")
+
+# Labels & Title
+axes[1].set_xlabel("Data Sources")
+axes[1].set_ylabel("Number of Proteomes")
+axes[1].set_title("Stacked Bar Plot of Proteome Counts")
+axes[1].grid(axis="y", linestyle="--", alpha=0.5)
 
 # Annotate counts on bars
-for i in range(2):  # Two bars
-    ax.text(i, total_up if i == 0 else total_atb, str(total_up if i == 0 else total_atb), 
-            ha="center", va="bottom", fontsize=12, fontweight="bold")
-    ax.text(i, up_values[i], str(up_values[i]), ha="center", va="center", color="white", fontsize=11)
-    ax.text(i, up_values[i] + atb_values[i], str(atb_values[i]), ha="center", va="center", color="white", fontsize=11)
+for i, (total, subset) in enumerate(zip(total_counts, subset_counts)):
+    axes[1].text(i, 
+                 total + max(total_counts) * 0.008, 
+                 str(total), 
+                 ha="center", 
+                 fontsize=12, 
+                 color="black")
+    axes[1].text(i, subset / 2, str(subset), 
+                 ha="center", 
+                 fontsize=12, 
+                 color="white", 
+                 fontweight="bold")  # Centered inside subset bar
 
+axes[1].legend(["Total", "Exclusive"])
+
+# Show both plots
+plt.tight_layout()
 plt.show()
-   
+
 ###############################################################################
-# Extract protein counts
-up_proteins = df_up["protein_count"]
-atb_proteins = df_atb["protein_count"]
+#=========================
+# Histogram: Protein count distribution
+#=========================
+# Extract counts
+up_proteins = df_up2["protein_count"]
+atb_proteins = df_atb2["protein_count"]
 
 # Plot histogram
 plt.figure(figsize=(8, 6))
 plt.hist(up_proteins, bins=50, alpha=0.6, color="blue", label="UP", edgecolor="black")
 plt.hist(atb_proteins, bins=50, alpha=0.6, color="red", label="ATB", edgecolor="black")
 
+plt.yscale("log")
+
 # Labels & Title
-plt.xlabel("Number of Proteins per Biosample")
-plt.ylabel("Number of Biosamples")
-plt.title("Protein Count Distribution Across Biosamples")
+plt.xlabel("Number of Proteins")
+plt.ylabel("Number of Proteomes")
+plt.title("Protein Count Distribution Across Proteomes")
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 
@@ -151,10 +288,8 @@ plt.grid(axis="y", linestyle="--", alpha=0.5)
 plt.show()
 
 ###############################################################################
-import numpy as np
-
 # Define bins (e.g., group by protein count ranges)
-bins = np.arange(0, max(up_proteins.max(), atb_proteins.max()) + 100, 100)  # Adjust bin size as needed
+bins = np.arange(1, max(up_proteins.max(), atb_proteins.max()) + 100, 100)  # Adjust bin size as needed
 
 # Count occurrences per bin
 up_counts, _ = np.histogram(up_proteins, bins)
@@ -165,33 +300,149 @@ plt.figure(figsize=(8, 6))
 plt.bar(bins[:-1], up_counts, width=100, alpha=0.6, color="blue", label="UP", edgecolor="black")
 plt.bar(bins[:-1], atb_counts, width=100, alpha=0.6, color="red", label="ATB", edgecolor="black")
 
+# Apply log scale to the y-axis
+plt.yscale("log")
+#plt.xscale("log")
+
 # Labels & Title
-plt.xlabel("Number of Proteins per Biosample")
-plt.ylabel("Number of Biosamples")
-plt.title("Binned Protein Counts Across Biosamples")
+plt.xlabel("Number of Proteins")
+plt.ylabel("Number of Proteomes")
+plt.title("Protein Count Distribution Across Proteomes")
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 
 plt.show()
-###############################################################################
-# Define x-axis limits
-min_protein = min(up_proteins.min(), atb_proteins.min())  # Minimum protein count in both datasets
-max_protein = max(up_proteins.max(), atb_proteins.max())  # Maximum protein count in both datasets
-margin = 50  # Adjust margin as needed
 
-x_min, x_max = min_protein - margin, max_protein + margin  # Expand range
-bins = np.linspace(x_min, x_max, 50)  # 50 bins between min and max
+###############################################################################
+# protein numbers
+# Assuming df_up and df_atb are your dataframes and 'protein_count' is the column of interest
+total_proteins_up = up_proteins.sum()
+average_proteins_up = up_proteins.mean()
+
+total_proteins_atb = atb_proteins.sum()
+average_proteins_atb = atb_proteins.mean()
+
+data = {
+    'Total Proteins': [total_proteins_up, total_proteins_atb],
+    'Average Proteins': [average_proteins_up, average_proteins_atb]
+}
+stats_df = pd.DataFrame(data, index=['UP', 'ATB'])
+
+
+import matplotlib.pyplot as plt
+
+# Plotting
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Bar plot for total proteins
+totals = ax1.bar(stats_df.index, stats_df['Total Proteins'], color='b', alpha=0.6, label='Total Proteins')
+# Labeling total proteins
+for rect in totals:
+    height = rect.get_height()
+    ax1.annotate('{}'.format(int(height)),
+                 xy=(rect.get_x() + rect.get_width() / 2, height),
+                 xytext=(0, 3),  # 3 points vertical offset
+                 textcoords="offset points",
+                 ha='center', va='bottom')
+
+# Create a second y-axis for the averages
+ax2 = ax1.twinx()
+averages = ax2.bar(stats_df.index, stats_df['Average Proteins'], color='r', alpha=0.6, label='Average Proteins', width=0.4)
+# Labeling average proteins
+for rect in averages:
+    height = rect.get_height()
+    ax2.annotate('{:.2f}'.format(height),
+                 xy=(rect.get_x() + rect.get_width() / 2, height),
+                 xytext=(0, 3),  # 3 points vertical offset
+                 textcoords="offset points",
+                 ha='center', va='bottom')
+
+# Setting labels and titles
+ax1.set_xlabel('Dataset', fontsize=12)
+ax1.set_ylabel('Total Protein Count', color='b', fontsize=12)
+ax2.set_ylabel('Average Protein Count', color='r', fontsize=12)
+ax1.set_title('Comparison of Total and Average Protein Counts in UP and ATB Datasets', fontsize=14)
+
+# Adding legends
+lines, labels = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines + lines2, labels + labels2, loc='upper left')
+
+# Show the plot
+plt.show()
+
+
+##############################################################################
+import pandas as pd
+
+# Load the data from a CSV file
+df_up_all = pd.read_csv(up_file, delimiter='\t')
+df_up_all2 = df_up_all[df_up_all['protein_count'] > 0]
+df_up_all2 = df_up_all.drop_duplicates(subset = 'biosample', keep = 'last')
+
+
+# count values
+# Count the values for each relevant column
+representative_count = df_up_all2['is_representative'].value_counts()
+reference_count = df_up_all2['is_reference'].value_counts()
+redundant_count = df_up_all2['is_redundant'].value_counts()
+excluded_count = df_up_all2['is_excluded'].value_counts()
+
+# Prepare a DataFrame from the counts
+status_data = pd.DataFrame({
+    'Representative': representative_count,
+    'Reference': reference_count,
+    #'Redundant': redundant_count,
+    'Excluded': excluded_count
+}).fillna(0)  # Fill NaNs with 0 in case some categories don't exist in the data
+
+################################################################################
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Extract counts
+up_proteins = df_up_all2["protein_count"]
+atb_proteins = df_up_all2["protein_count"]
+
+# Create masks for each category
+is_excluded = (df_up_all2["is_excluded"] == 1) | (df_up2["is_excluded"] == -1)
+is_redundant = df_up_all2["is_redundant"] == 't'
+is_reference = df_up_all2["is_reference"] == 't'
+is_representative = df_up_all2["is_representative"] == 't'
 
 # Plot histogram
-plt.figure(figsize=(8, 6))
-plt.hist(up_proteins, bins=bins, alpha=0.6, color="blue", label="UniProt (UP)", edgecolor="black")
-plt.hist(atb_proteins, bins=bins, alpha=0.6, color="red", label="AntibioticDB (ATB)", edgecolor="black")
+plt.figure(figsize=(12, 8))
+
+# Plot ATB data
+plt.hist(atb_proteins, bins=50, alpha=0.6, color="red", label="ATB", edgecolor="black")
+
+# Plot UP data with different categories, excluding those already plotted
+up_unclassified = ~(is_excluded | is_redundant | is_reference | is_representative)
+plt.hist(up_proteins[up_unclassified], bins=50, alpha=0.6, color="blue", 
+         label="UP (Other)", edgecolor="black")
+
+up_excluded = is_excluded & up_unclassified
+plt.hist(up_proteins[up_excluded], bins=50, alpha=0.6, color="yellow", 
+         label="UP (Excluded)", edgecolor="black")
+
+up_redundant = is_redundant & up_unclassified
+plt.hist(up_proteins[up_redundant], bins=50, alpha=0.6, color="orange", 
+         label="UP (Redundant)", edgecolor="black")
+
+up_reference = is_reference & up_unclassified
+plt.hist(up_proteins[up_reference], bins=50, alpha=0.6, color="purple", 
+         label="UP (Reference)", edgecolor="black")
+
+up_representative = is_representative & up_unclassified
+plt.hist(up_proteins[up_representative], bins=50, alpha=0.6, color="green", 
+         label="UP (Representative)", edgecolor="black")
+
+plt.yscale("log")
 
 # Labels & Title
-plt.xlabel("Number of Proteins per Biosample")
-plt.ylabel("Number of Biosamples")
-plt.title("Protein Count Distribution Across Biosamples")
-plt.xlim(x_min, x_max)  # Apply x-axis range
+plt.xlabel("Number of Proteins")
+plt.ylabel("Number of Proteomes")
+plt.title("Protein Count Distribution Across Proteomes")
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 
@@ -206,8 +457,10 @@ plt.show()
 #####
 # =============================================================================
 # Read the data 
-all_samples = pd.read_csv('/home/pub/Work/data_arise_proteome/spneumo_dataset/p_counts.txt', sep='\t', names=['sample_id', 'protein_count'])
-mapped_samples = pd.read_csv('/home/pub/Work/data_arise_proteome/spneumo_dataset/SAM_proteins_per_UPID.csv',
+all_samples = pd.read_csv('/home/pub/Work/data_arise_proteome/spneumo_dataset/del/p_counts.txt', 
+                          sep='\t', 
+                          names=['sample_id', 'protein_count'])
+mapped_samples = pd.read_csv('/home/pub/Work/data_arise_proteome/spneumo_dataset/del/SAM_proteins_per_UPID.tsv',
                              sep='\t',
                              skiprows=1,
                              names=['upid', 'sample_id', 'protein_count'])

@@ -13,7 +13,7 @@ from glob import glob
 from tqdm import tqdm
 from Bio import SeqIO # pip install biopython
 import pprint as pp
-from memory_profiler import memory_usage #pip install ,update yml?
+#from memory_profiler import memory_usage #pip install ,update yml?
 
 # Enable tqdm for pandas
 tqdm.pandas()
@@ -38,6 +38,10 @@ from functions import *  # imports functions.py as a module
 proteome_indir = args.fasta_dir
 protein_cluster_infile = args.tsv_file
 output_file = args.outfile
+
+proteome_indir = '/home/pub/Work/data_arise_proteome/spneumo_dataset/spneumo_all'
+protein_cluster_infile = '/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Species_protein_cluster.tsv'
+output_file = '/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv'
 
 #============
 # Stage 1: Create proteome dict
@@ -75,7 +79,7 @@ for file in tqdm(fa_files, desc="Processing .fa files"):
         else:     
             proteomeD[record.id] += f"_{proteome_id}"
 
-print(proteomeD['ENSSSCP00015020973|188'])
+#print(proteomeD['ENSSSCP00015020973|188'])
 
 # End the timer and calculate elapsed time
 end_time = time.time()
@@ -96,7 +100,10 @@ pp.pprint(list(proteomeD.items())[:5])
 #find_proteome_id()
 #============
 # Read in the TSV file with protein pairs
-pclustersDF = pd.read_csv(protein_cluster_infile, sep='\t', usecols=[0, 1], names=['protein1_id', 'protein2_id'])
+pclustersDF = pd.read_csv(protein_cluster_infile, 
+                          sep='\t', 
+                          usecols=[0, 1], 
+                          names=['protein1_id', 'protein2_id'])
 
 # Added to just work on the unique entires
 pclustersDF = pclustersDF.drop_duplicates()
@@ -127,6 +134,13 @@ pclustersDF['protein2_id_proteome'] = pclustersDF['protein2_id'].progress_apply(
 # Sort the DataFrame by 'cluster_id' in ascending order without resetting the index
 pclustersDF = pclustersDF.sort_values(by='cluster_id')
 
+# Rename and rearrange columns to match desired output format
+pclustersDF = pclustersDF.rename(columns={
+    'protein2_id': 'protein_id',
+    'protein2_id_proteome': 'proteomes',
+    'representative': 'is_rep'
+})
+
 # End timing
 end_time = time.time()
 elapsed_time_s2 = end_time - start_time
@@ -143,23 +157,25 @@ print("Sample mapped entries:", pclustersDF[['cluster_id', 'protein1_id', 'prote
 #=========================
 # Save the updated DataFrame with proteome ID added
 #output_clusterDF_file ='/species_protein_cluster_with_proteomes.tsv'
-cols_to_output = ['cluster_id', 
-                  #'protein1_id', 
-                  #'protein2_id', 
-                  'representative', 
-                  'protein2_id_proteome']
+# cols_to_output = ['cluster_id', 
+#                   #'protein1_id', 
+#                   #'protein2_id', 
+#                   'representative', 
+#                   'protein2_id_proteome']
 
-print(f"writing file: {output_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
-pclustersDF[cols_to_output].to_csv(output_file, sep='\t', index=True)
-print(f"Updated file saved as {output_file}")
+# print(f"writing file: {output_file}\nDim of df: {pclustersDF[cols_to_output].shape}")
+# pclustersDF[cols_to_output].to_csv(output_file, sep='\t', index=True)
+# print(f"Updated file saved as {output_file}")
 
-##############################################################################
-#TODO: just a start, need to apply this to each stage preferrably
-# Measure memory usage and call the function
-mem_usage = memory_usage((read_large_tsv, (protein_cluster_infile,)), interval=1, timeout=None)
+# Select and order the columns as per the desired output
+output_df = pclustersDF[['cluster_id', 'protein_id', 'proteomes', 'is_rep']]
 
-# Report memory usage
-print(f"Peak memory usage to read TSV file: {max(mem_usage):.2f} MB")
+# Write the DataFrame to a tab-delimited file
+output_df.to_csv(output_file, sep='\t', index=False)
+
+print(f"Output written to {output_file}")
+print("Sample output:")
+print(output_df.head().to_string(index=False))
 
 ###############################################################################
 # CHECK: one to many mapping b/w protein and proteome
