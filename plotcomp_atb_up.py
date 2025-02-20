@@ -86,6 +86,7 @@ plt.show()
 #===========
 # Bar plot
 #===========
+
 categories = ["Only UP", "Only ATB", "Both"]
 counts = [len(only_up), len(only_atb), len(both_sources)]
 
@@ -238,7 +239,7 @@ axes[1].bar(categories,
 
 # Labels & Title
 axes[1].set_xlabel("Data Sources")
-axes[1].set_ylabel("Number of Proteomes")
+axes[1].set_ylabel("Number of Biosamples")
 axes[1].set_title("Stacked Bar Plot of Proteome Counts")
 axes[1].grid(axis="y", linestyle="--", alpha=0.5)
 
@@ -446,9 +447,7 @@ plt.title("Protein Count Distribution Across Proteomes")
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 
-# Show plot
 plt.show()
-
 
 ###############################################################################
 
