@@ -14,7 +14,7 @@ basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 # Load TSV files
 #up_file = basedir + "/up_pcounts.tsv"
-up_file = basedir + "/spneumo_biosample_info.out"
+up_file = basedir + "/spneumo_biosample_info_v1.out"
 atb_file = basedir + "/atb_pcounts.tsv"
 
 # Read the data
@@ -46,113 +46,6 @@ only_up = df_merged[(df_merged["protein_count_up"] > 0) & (df_merged["protein_co
 only_atb = df_merged[(df_merged["protein_count_atb"] > 0) & (df_merged["protein_count_up"] == 0)]
 both_sources = df_merged[(df_merged["protein_count_up"] > 0) & (df_merged["protein_count_atb"] > 0)]
 
-
-###############################################################################
-# Plot histogram
-plt.figure(figsize=(10, 6))
-plt.hist(df_merged["protein_count_up"], bins=50, alpha=0.5, label="UP")
-plt.hist(df_merged["protein_count_atb"], bins=50, alpha=0.5, label="ATB")
-plt.xlabel("Protein Count")
-plt.ylabel("Frequency")
-plt.title("Protein Count Distribution Across Data Sources")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-plt.show()
-
-# Filter out entries where protein count is 0
-filtered_protein_count_up = df_merged["protein_count_up"][df_merged["protein_count_up"] > 0]
-filtered_protein_count_atb = df_merged["protein_count_atb"][df_merged["protein_count_atb"] > 0]
-
-# Set up the plot
-plt.figure(figsize=(10, 6))
-plt.hist(filtered_protein_count_up, bins=50, alpha=0.5, label="UP")
-plt.hist(filtered_protein_count_atb, bins=50, alpha=0.5, label="ATB")
-plt.xlabel("Protein Count")
-plt.ylabel("Frequency")
-plt.title("Protein Count Distribution Across Data Sources")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-
-# Apply log scale to the axes
-plt.yscale("log")
-#plt.xscale("log")
-plt.show()
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Define the bin width
-bin_width = 1
-
-# Filter out entries where protein count is 0
-filtered_protein_count_up = df_merged["protein_count_up"][df_merged["protein_count_up"] > 0]
-filtered_protein_count_atb = df_merged["protein_count_atb"][df_merged["protein_count_atb"] > 0]
-
-# Determine the range for the bins
-min_bin = min(filtered_protein_count_up.min(), filtered_protein_count_atb.min())
-max_bin = max(filtered_protein_count_up.max(), filtered_protein_count_atb.max())
-bins = np.arange(min_bin, max_bin + bin_width, bin_width)
-
-# Set up the plot
-plt.figure(figsize=(10, 6))
-plt.hist(filtered_protein_count_up, bins=bins, alpha=0.5, label="UP")
-plt.hist(filtered_protein_count_atb, bins=bins, alpha=0.5, label="ATB")
-plt.xlabel("Protein Count")
-plt.ylabel("Frequency")
-plt.title("Protein Count Distribution Across Data Sources")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-# Apply log scale to the axes
-plt.yscale("log")
-#plt.xscale("log")
-plt.show()
-
-
-# dynamic bin width
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-def freedman_diaconis(data):
-    # Compute the interquartile range
-    IQR = np.percentile(data, 75) - np.percentile(data, 25)
-    # Compute the bin width using the Freedman-Diaconis rule
-    n = len(data)
-    bin_width = 2 * IQR * (n ** (-1/3))
-    return max(bin_width, 1)  # Ensure a minimum bin width of 1 to avoid overly narrow bins
-
-# Filter out entries where protein count is 0
-filtered_protein_count_up = df_merged["protein_count_up"][df_merged["protein_count_up"] > 0]
-filtered_protein_count_atb = df_merged["protein_count_atb"][df_merged["protein_count_atb"] > 0]
-
-# Determine the bin width for each dataset
-bin_width_up = freedman_diaconis(filtered_protein_count_up)
-bin_width_atb = freedman_diaconis(filtered_protein_count_atb)
-
-# Use the average bin width or the smallest for better comparison
-bin_width = min(bin_width_up, bin_width_atb)
-#bin_width = (bin_width_up + bin_width_atb)/2
-
-
-# Determine the range for the bins
-min_bin = min(filtered_protein_count_up.min(), filtered_protein_count_atb.min())
-max_bin = max(filtered_protein_count_up.max(), filtered_protein_count_atb.max())
-bins = np.arange(min_bin, max_bin + bin_width, bin_width)
-
-# Set up the plot
-plt.figure(figsize=(10, 6))
-plt.hist(filtered_protein_count_up, bins=bins, alpha=0.5, label="UP")
-plt.hist(filtered_protein_count_atb, bins=bins, alpha=0.5, label="ATB")
-plt.xlabel("Protein Count")
-plt.ylabel("Frequency")
-plt.title("Protein Count Distribution Across Data Sources")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-# Apply log scale to the axes
-plt.yscale("log")
-#plt.xscale("log")
-plt.show()
 
 ###############################################################################
 #===========
@@ -270,26 +163,25 @@ plt.show()
 up_proteins = df_up2["protein_count"]
 atb_proteins = df_atb2["protein_count"]
 
-
 # --- PLOT: histogram with number of bins specified --- #not always accurate!
-plt.figure(figsize=(8, 6))
-plt.hist(up_proteins, bins=50, alpha=0.6, color="blue", label="UP", edgecolor="black")
-plt.hist(atb_proteins, bins=50, alpha=0.6, color="red", label="ATB", edgecolor="black")
+# plt.figure(figsize=(8, 6))
+# plt.hist(up_proteins, bins=50, alpha=0.6, color="blue", label="UP", edgecolor="black")
+# plt.hist(atb_proteins, bins=50, alpha=0.6, color="red", label="ATB", edgecolor="black")
 
-# Apply log scale to the y-axis
-plt.yscale("log")
-#plt.xscale("log")
+# # Apply log scale to the y-axis
+# plt.yscale("log")
+# #plt.xscale("log")
 
-# Labels & Title
-plt.xlabel("Number of Proteins")
-plt.ylabel("Number of Proteomes")
-plt.title("Protein Count Distribution Across Proteomes")
-plt.legend()
-plt.grid(axis="y", linestyle="--", alpha=0.5)
-plt.show()
-
+# # Labels & Title
+# plt.xlabel("Number of Proteins")
+# plt.ylabel("Number of Proteomes")
+# plt.title("Protein Count Distribution Across Proteomes")
+# plt.legend()
+# plt.grid(axis="y", linestyle="--", alpha=0.5)
+# plt.show()
 
 # --- PLOT: histogram with bin width specified  ---
+
 # Define bins (e.g., group by protein count ranges)
 bins = np.arange(1, max(up_proteins.max(), atb_proteins.max()) + 100, 100)  # Adjust bin size as needed
 
@@ -328,6 +220,3 @@ plt.title("Protein Count Distribution Across Proteomes")
 plt.legend()
 plt.grid(axis="y", linestyle="--", alpha=0.5)
 plt.show()
-
-# --- PLOT: histogram with bin width specified  ---
-
