@@ -51,24 +51,24 @@ both_sources = df_merged[(df_merged["protein_count_up"] > 0) & (df_merged["prote
 #===========
 # Bar plot
 #===========
-categories = ["Only UP", "Only ATB", "Both"]
-counts = [len(only_up), len(only_atb), len(both_sources)]
+#categories = ["Only UP", "Both", "Only ATB"]
+# counts = [len(only_up), len(both_sources), len(only_atb)]
 
-# Plot
-plt.figure(figsize=(8, 7))
-plt.bar(categories, counts, color=["blue", "red", "green"], alpha=0.7)
+# # Plot
+# plt.figure(figsize=(8, 7))
+# plt.bar(categories, counts, color=["blue", "green", "red"], alpha=0.7)
 
-# Labels & Title
-plt.xlabel("Data Sources")
-plt.ylabel("Number of Proteomes")
-plt.title("Comparison of Proteome counts by Biosample in UP and ATB")
-plt.grid(axis="y", linestyle="--", alpha=0.5)
+# # Labels & Title
+# plt.xlabel("Data Sources")
+# plt.ylabel("Number of Proteomes")
+# plt.title("Comparison of Proteome counts by Biosample in UP and ATB")
+# plt.grid(axis="y", linestyle="--", alpha=0.5)
 
-# Annotate counts
-for i, v in enumerate(counts):
-    plt.text(i, v + max(counts) * 0.02, str(v), ha="center", fontsize=14)
+# # Annotate counts
+# for i, v in enumerate(counts):
+#     plt.text(i, v + max(counts) * 0.02, str(v), ha="center", fontsize=14)
 
-plt.show()
+# plt.show()
 ###############################################################################
 #===============
 # Venn and Stacked bar plot: side by side
