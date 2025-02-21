@@ -23,11 +23,13 @@ def process_file(input_file, output_file, chunksize):
     cluster_counts = cluster_counts.astype(int).reset_index()
     cluster_counts.columns = ['cluster_id', 'count_of_proteomes']
     cluster_counts.to_csv(output_file, sep='\t', index=False)
-    print(f"Cluster count saved to: {output_file}")
+    print(f"\nCluster count saved to: {output_file}")
 
-def plot_data(input_file, output_plot, min_proteomes):
+def plot_data(input_file, output_plot, min_proteomes=0):
     """Plots the distribution of cluster sizes, filtering by minimum proteomes if needed."""
     df = pd.read_csv(input_file, sep='\t')
+    #df = pd.read_csv(output_file, sep='\t')
+
 
     # Filter based on min_proteomes threshold
     df = df[df['count_of_proteomes'] >= min_proteomes]
@@ -51,21 +53,19 @@ if __name__ == '__main__':
     parser.add_argument("--chunksize", type=int, default=100000, help="Number of rows to process per chunk (default: 100000).")
     parser.add_argument("--min_proteomes", type=int, default=1, help="Minimum proteomes per cluster to include in plot (default: 1).")
 
-    args = parser.parse_args()
+###############################################################################
+#input_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv"
+#output_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Count_Labelled_Species_protein_cluster.tsv"
+#chunksize= 100000
+#min_proteomes=0
 
-    # Set default output filenames
-    if args.output_file is None:
-        args.output_file = f"Count_{args.input_file}"
-    if args.output_plot is None:
-        args.output_plot = f"Plot_{args.input_file}.png"
+#f = pd.read_csv("/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv", sep = "\t")
 
-    # Step 1: Process the file if requested
-    if args.process:
-        print(f"Processing file: {args.input_file}")
-        process_file(args.input_file, args.output_file, args.chunksize)
+#f.groupby(['cluster_id']).size()
+#f.groupby(['protein_id']).size()
+#f.groupby(['proteomes']).size()
+#f.groupby(['cluster_id', 'proteomes'])
+#f.value_counts(subset = ['cluster_id'])
 
-    # Step 2: Generate plot if requested
-    if args.plot:
-        plot_input = args.output_file if args.process else args.input_file
-        print(f"Generating plot from: {plot_input}")
-        plot_data(plot_input, args.output_plot, args.min_proteomes)
+#f2 = f['cluster_id'].value_counts()
+
