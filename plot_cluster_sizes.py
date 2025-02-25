@@ -63,9 +63,26 @@ if __name__ == '__main__':
         print(f"Generating plot from: {plot_input}")
         plot_data(plot_input, args.output_plot, args.min_proteomes)
 
-
+###############################################################################:wq
 input_file="/home/tunstall/Documents/arise/spneumo_dataset/outL.tsv"
 chunksize=100000
 #output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_outL.tsv"
 output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_Labelled_Species_protein_cluster.tsv"
 min_proteomes=1
+
+###############################################################################
+#input_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv"
+#output_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Count_Labelled_Species_protein_cluster.tsv"
+#chunksize= 100000
+#min_proteomes=0
+
+#f = pd.read_csv("/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv", sep = "\t")
+
+#f.groupby(['cluster_id']).size()
+#f.groupby(['protein_id']).size()
+#f.groupby(['proteomes']).size()
+#f.groupby(['cluster_id', 'proteomes'])
+#f.value_counts(subset = ['cluster_id'])
+
+#f2 = f['cluster_id'].value_counts()
+

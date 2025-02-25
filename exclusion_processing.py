@@ -21,8 +21,8 @@ import numpy as np
 ######
 # Read data
 homedir = os.path.expanduser("~")
-#basedir =  homedir + "/Documents/arise/spneumo_dataset"
-basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+basedir =  homedir + "/Documents/arise/spneumo_dataset"
+#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 # Load TSV files
 up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
@@ -38,6 +38,8 @@ exclusion_reasons = basedir + "/exclusion_reasons.tsv"
 #print(f"\nNo. of of entries with 0 proteins: {len(df_up_original[df_up_original['protein_count']== 0])}")
 #print(f"\nLength of UP DF after removing proteomes with 0 proteins: {len(df_up_all)}")
    
+
+
 ###############################################################################
 def merge_tsv_files(file1_path, file2_path, 
                     file1_merge_col='exclusion_id', 
