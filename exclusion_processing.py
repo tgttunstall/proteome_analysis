@@ -21,8 +21,8 @@ import numpy as np
 ######
 # Read data
 homedir = os.path.expanduser("~")
-basedir =  homedir + "/Documents/arise/spneumo_dataset"
-#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+#basedir =  homedir + "/Documents/arise/spneumo_dataset"
+basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 # Load TSV files
 up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
@@ -104,10 +104,24 @@ print(merged_data_all.head())
 
 #print("\nMerged with specific columns:")
 #print(merged_data_specific.head())
+#################
+# code for is_effective == t and exclusion_ids 1,7,9,14,29,94,96,99
+
+# Usage
+ids_to_keep = [29, 94, 96, 99]
+#ids_to_omit = [1, 2, 7, 9, 14, 26] #26514
+ids_to_omit = [1, 7, 9, 14, 2] #26546
+
+assembly_level_to_exclude = ['partial']
+excluded_protein_counts = [0]
+
 ###############################################################################
-import pandas as pd
-from tqdm.auto import tqdm
-def process_exclusion_data(df, ids_to_keep, ids_to_omit, excluded_protein_counts, check_immunity=True):
+def process_exclusion_data(df, 
+                           ids_to_keep, 
+                           ids_to_omit, 
+                           excluded_protein_counts=[0], 
+                           assembly_level_to_exclude = ['partial', 'full']
+                           ):
     """
     Processes exclusion reasons from a dataset, handling cases where multiple exclusion reasons
     may exist for the same UPID, applying logic to keep or omit records based on user-defined criteria.
@@ -127,27 +141,48 @@ def process_exclusion_data(df, ids_to_keep, ids_to_omit, excluded_protein_counts
     #df = pd.read_csv(file_path, sep='\t')
 
     # Initialize log data structure
-    log_data = {
-        'multiple_ids_to_keep': [],
-        'multiple_ids_to_omit': [],
-        'conflicted_ids': []
-    }
+    #log_data = {
+    #    'multiple_ids_to_keep': [],
+    #    'multiple_ids_to_omit': [],
+    #    'conflicted_ids': []
+    #}
 
+
+    print(f"\nExcluding proteomes with protein count: {excluded_protein_counts}")
+    df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
+    print(len(df2))
+    
+    print(f"\nExcluding proteomes with assembly level: {assembly_level_to_exclude}")
+    df2 = df2[~df2['assembly_level'].isin(assembly_level_to_exclude)]
+    print(len(df2))
+    
+    
+    
 ############
-# Usage
-ids_to_keep = [29, 94, 96, 99]
-ids_to_omit = [1, 2, 7, 9, 14, 26]
-assembly_level_to_exclude = ['partial']
-excluded_protein_counts = [0]
+# Custom aggregation function to concatenate values
+def concatenate_values(series):
+    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
+
+# Custom aggregation function for 'set'
+def to_set(series):
+    return set(series)
+
+# reorder cols
+def move_cols_to_end(df, cols):
+    return df[[x for x in df.columns if not x in cols] + cols]
 
 ############
 df = merged_data_all.copy()
+print(f"\nLength of input data: {len(df)}")
+print(f"\nCount effective exclusions:\n {df['is_effective'].value_counts()}")
 
+print(f"\nExcluding proteomes with protein count: {excluded_protein_counts}")
 df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
-print(len(df2))
+print(f"\nLength of df: {len(df2)}")
 
+print(f"\nExcluding proteomes with assembly level: {assembly_level_to_exclude}")
 df2 = df2[~df2['assembly_level'].isin(assembly_level_to_exclude)]
-print(len(df2))
+print(f"\nLength of df: {len(df2)}")
 
 #3 upids belongig to 10 records have partial
 #	upid
@@ -162,24 +197,12 @@ print(len(df2))
 #26285	UP000242121
 #26304	UP000464300
 
-df2['is_effective'].value_counts()
+print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
-print(len(df))
-
-# Custom aggregation function to concatenate values
-def concatenate_values(series):
-    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
-
-# Custom aggregation function for 'set'
-def to_set(series):
-    return set(series)
-
-# reorder cols
-def move_cols_to_end(df, cols):
-    return df[[x for x in df.columns if not x in cols] + cols]
 
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
+#grouped2 = df2.groupby('upid')['exclusion_id'].agg(list)
 
 upids_to_remove = grouped[
     grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))
@@ -189,6 +212,12 @@ upids_to_filter = grouped[
     grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
 ].index
 
+a = upids_to_remove.to_list() + upids_to_filter.to_list()
+
+check2 =df2[~df2['upid'].isin(upids_to_remove.to_list() + upids_to_filter.to_list())]
+#some upids to check: UP000000685, UP000002642, UP000235432 (8772)
+
+#
 # Step 2: Filter DataFrame
 df_filtered = df2[~df2['upid'].isin(upids_to_remove)]  # Remove unwanted upids
 df_filtered = df_filtered[
@@ -231,7 +260,8 @@ print(duplicates)
 
 df2['is_effective'].value_counts()
 df_grouped['is_effective'].value_counts()
-
+df_grouped['protein_count'].describe()
+######
 
 cols_move_end = ['exclusion_id','id_description','is_effective','source']
 df_grouped_reordered = move_cols_to_end(df_grouped, cols_move_end)
