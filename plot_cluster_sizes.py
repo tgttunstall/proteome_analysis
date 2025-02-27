@@ -4,6 +4,22 @@ import matplotlib.pyplot as plt
 import argparse
 from tqdm import tqdm
 
+input_file="/home/tunstall/Documents/arise/spneumo_dataset/outL.tsv"
+chunksize=100000
+#output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_outL.tsv"
+output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_Labelled_Species_protein_cluster.tsv"
+min_proteomes=0
+
+#########
+df = pd.read_csv(input_file, sep = "\t")
+a = df.groupby(['cluster_id',  'protein_id']).size()
+b = df.groupby('cluster_id')['protein_id'].nunique()
+c = df.groupby('protein_id')['cluster_id'].nunique()
+
+#########
+
+
+
 def process_file(input_file, output_file, chunksize):
     """Processes the input file to count proteomes per cluster and saves the result."""
     cluster_counts = pd.Series(dtype=int)
@@ -64,11 +80,6 @@ if __name__ == '__main__':
         plot_data(plot_input, args.output_plot, args.min_proteomes)
 
 ###############################################################################:wq
-input_file="/home/tunstall/Documents/arise/spneumo_dataset/outL.tsv"
-chunksize=100000
-#output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_outL.tsv"
-output_file="/home/tunstall/Documents/arise/spneumo_dataset/Count_Labelled_Species_protein_cluster.tsv"
-min_proteomes=1
 
 ###############################################################################
 #input_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/test_ds/data/Labelled_Species_protein_cluster.tsv"

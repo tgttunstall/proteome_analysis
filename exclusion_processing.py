@@ -102,14 +102,11 @@ merged_data_specific = merge_tsv_files(file1_path=up_spneumo_proteomes,
 print("Merged with all columns (default):")
 print(merged_data_all.head())
 
-print("\nMerged with specific columns:")
-print(merged_data_specific.head())
+#print("\nMerged with specific columns:")
+#print(merged_data_specific.head())
 ###############################################################################
 import pandas as pd
 from tqdm.auto import tqdm
-
-df = merged_data_all.copy()
-
 def process_exclusion_data(df, ids_to_keep, ids_to_omit, excluded_protein_counts, check_immunity=True):
     """
     Processes exclusion reasons from a dataset, handling cases where multiple exclusion reasons
@@ -136,241 +133,115 @@ def process_exclusion_data(df, ids_to_keep, ids_to_omit, excluded_protein_counts
         'conflicted_ids': []
     }
 
-    # Exclude records by protein count
-   df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
+############
+# Usage
+ids_to_keep = [29, 94, 96, 99]
+ids_to_omit = [1, 2, 7, 9, 14, 26]
+assembly_level_to_exclude = ['partial']
+excluded_protein_counts = [0]
 
-    # Group by 'upid' and apply processing
-#    tqdm.pandas(desc="Processing groups")
+############
+df = merged_data_all.copy()
 
-    # return cleaned_df, log_df
-    #df.groupby(['is_excluded']).size()
-    df2.groupby(['exclusion_immunity']).size()
-    df2.groupby(['exclusion_immunity', 'is_excluded']).size()
-    df2.groupby(['is_excluded', 'exclusion_immunity']).size()
-    df2.groupby(['is_excluded', 'is_effective']).size()
+df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
+print(len(df2))
 
+df2 = df2[~df2['assembly_level'].isin(assembly_level_to_exclude)]
+print(len(df2))
 
-    #condition1 = df2['exclusion_id'] == 't'
-    #condition2 = df2['exclusion_immunity'] == 't'
-    condition_keep = df2['exclusion_id'].isin(ids_to_keep) 
-    condition_omit = df2['exclusion_id'].isin(ids_to_omit) 
-    
-        
-    #df3 = df2[condition1 | condition2] 
-    #df3 = df2[condition1 & condition2 & condition3] 
-    len(df2[condition_omit])
-    df3 = df2[~condition_omit]
-    len(df3) == len(df2) - len(df2[condition_omit])
-    
-    df3.groupby('upid').size()
-    
-    # count duplicates of upid
-    dups = df3[df3.duplicated(subset='upid')]
-    
-    df3[condition_keep]
-    df4 = df3[condition_keep]
-    
-    dups = df4[df4.duplicated(subset='upid')]
+#3 upids belongig to 10 records have partial
+#	upid
+#3944	UP000243639
+#3945	UP000243639
+#3946	UP000243639
+#4450	UP000243565
+#4451	UP000243565
+#4452	UP000243565
+#26283	UP000242121
+#26284	UP000242121
+#26285	UP000242121
+#26304	UP000464300
 
-    a = df[df['upid'] == 'UP000304910']
-    b = df[df['upid'].isin(list(dups['upid']))]
-    c = b.groupby('upid').size()
-    df4.groupby(['is_excluded', 'is_effective']).size()
-    
-    
-    # Select all columns except 'exclusion_id' for duplicate checking
-    cols_to_checkL = df.columns.difference(['exclusion_id', 'biosample']).tolist()
+df2['is_effective'].value_counts()
 
+print(len(df))
 
-#########
-    # Identify duplicates based on 'upid' and all other columns except 'exclusion_id'
-    df.duplicated(subset=['upid', 'protein_count']).value_counts()
-    
-    df.duplicated(subset=cols_to_checkL).value_counts()
-    
-    df2.duplicated(subset=['upid', 'protein_count'], keep=False).value_counts()
-    
-    df2['is_duplicate'] = df2.duplicated(subset=['upid', 'protein_count'], keep=False)
-    df2['is_duplicate'].value_counts()
-
-    
-    #if df2['is_duplicate'].any():
-    #    print(df2['is_duplicate'].value_counts())
-        
-    
-###########    
-
-    df2['is_duplicate'] = df2.duplicated(subset=['upid', 'protein_count'], keep=False)
-    df2['is_duplicate'].value_counts()
-    
-    # Create the condition to identify rows to omit
-    condition_omit = (df2['is_duplicate'] == True) & (df2['exclusion_id'].isin(ids_to_omit))
-    
-    # Use the condition to subset the DataFrame by keeping rows that do not meet the condition
-    filtered_df1 = df2[~condition_omit]
-    
-    print(filtered_df1)
-
-
-    # Calculate total rows in the original DataFrame
-    total_rows = len(df2)
-    
-    # Create the condition to identify rows to omit
-    condition_omit = (df2['is_duplicate'] == True) & (df2['exclusion_id'].isin(ids_to_omit))
-    
-    # Count the number of rows that meet the condition to omit
-    rows_to_omit = df2[condition_omit].shape[0]
-    
-    # Calculate the expected length of the final DataFrame
-    expected_length_filtered_df1 = total_rows - rows_to_omit
-    
-    # Apply the condition to subset the DataFrame
-    filtered_df1 = df2[~condition_omit]
-    
-    # Actual length of the final DataFrame
-    actual_length_filtered_df1 = len(filtered_df1)
-    
-    # Output the expected and actual lengths for verification
-    print("Expected length of final DataFrame:", expected_length_filtered_df1)
-    print("Actual length of final DataFrame:", actual_length_filtered_df1)
-    
-    try:
-        # Assert to check if the actual length matches the expected length
-        assert actual_length_filtered_df1 == expected_length_filtered_df1, \
-            "Mismatch in expected and actual lengths of first filtered DataFrame"
-        print("Success: The lengths match. Filtering process is verified.")
-    except AssertionError as e:
-        print(e)
-
-###
-    
-    # Assuming 'filtered_df1' is a predefined DataFrame from prior steps
-    
-    # Calculate total rows in the original DataFrame
-    total_rows = len(filtered_df1)
-    
-    # Create the condition to identify rows to keep (not omit)
-    #condition_keep = (filtered_df1['is_duplicate'] == True) & (filtered_df1['exclusion_id'].isin(ids_to_keep))
-    condition_keep = (filtered_df1['exclusion_id'].isin(ids_to_keep))
-
-    # Count the number of rows that meet the condition to keep
-    rows_to_keep = filtered_df1[condition_keep].shape[0]
-    
-    # Calculate the expected length of the final DataFrame after keeping
-    expected_length_filtered_df2 = rows_to_keep
-    
-    # Apply the condition to subset the DataFrame further if needed
-    # Assuming here you want to keep these rows:
-    filtered_df2  = filtered_df1[condition_keep]
-    
-    # Actual length of the final DataFrame
-    actual_length_filtered_df2 = len(filtered_df2)
-    
-    # Output the expected and actual lengths for verification
-    print("Expected length of final DataFrame:", expected_length_filtered_df2)
-    print("Actual length of final DataFrame:", actual_length_filtered_df2)
-    
-    # Final Sanity Check
-    #assert actual_length_filtered_df2 == expected_length_filtered_df2, "Mismatch in expected and actual lengths of final DataFrame"
-
-    # Sanity Check
-    try:
-        # Assert to check if the actual length matches the expected length
-        assert actual_length_filtered_df2 == expected_length_filtered_df2, \
-            "Mismatch in expected and actual lengths of first filtered DataFrame"
-        print("Success: The lengths match. Filtering process is verified.")
-    except AssertionError as e:
-        print(e)
-
-##
-filtered_df2['is_duplicate'].value_counts()
-filtered_df2['upid'].nunique()
-
-df4[df4.duplicated(subset= ['upid', 'protein_count'])]
-df4[df4.duplicated(subset= ['upid'])]
-
-df4['is_duplicate'].value_counts()
-df4['upid'].nunique()
-
-###
-
-filtered_df2['upid'].nunique()
-filtered_df2['exclusion_id'].isin(ids_to_keep).value_counts()
-filtered_df2['exclusion_id'].isin(ids_to_omit).value_counts()
-
-filtered_df2.groupby(['exclusion_id']).size()
-filtered_df2['upid'].nunique() #17911
-
-
-filtered_df2 = filtered_df2[filtered_df2['assembly_level'] !='partial']
-
-
-###
-dups_df2 = filtered_df2[filtered_df2.duplicated(subset= ['upid', 'protein_count'])]
-check = filtered_df2[filtered_df2['upid'].isin(dups_df2['upid'])]
-check['protein_count'].value_counts()
-###
-
-# Define custom aggregation for specific columns
+# Custom aggregation function to concatenate values
 def concatenate_values(series):
-    return ','.join(map(str, series))  # Join all values into a comma-separated string without set conversion
+    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
 
-# Set up aggregation rules
-aggregations = {
-    'exclusion_id': concatenate_values,
-    'id_description': concatenate_values,
-    'is_effective': concatenate_values,
-    'source': concatenate_values,
-}
-
-# Default all other columns to use 'first' if not specifically mentioned
-for col in filtered_df2.columns:
-    if col not in aggregations:
-        aggregations[col] = 'first'
-
-# Group by 'upid' and aggregate
-aggregated_df = filtered_df2.groupby('upid').agg(aggregations)
-
-aggregated_df = aggregated_df.reset_index(drop=True)
-
-#aggregated_df = aggregated_df.reset_index()  # 'upid' becomes a column here properly
-# Display the result
-print(aggregated_df)
-a = aggregated_df[aggregated_df['upid'] == 'UP000304910']
+# Custom aggregation function for 'set'
+def to_set(series):
+    return set(series)
 
 # reorder cols
 def move_cols_to_end(df, cols):
     return df[[x for x in df.columns if not x in cols] + cols]
 
+# Step 1: Identify upids to remove
+grouped = df2.groupby('upid')['exclusion_id'].agg(set)
+
+upids_to_remove = grouped[
+    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))
+].index
+
+upids_to_filter = grouped[
+    grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
+].index
+
+# Step 2: Filter DataFrame
+df_filtered = df2[~df2['upid'].isin(upids_to_remove)]  # Remove unwanted upids
+df_filtered = df_filtered[
+    df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
+    ~df_filtered['upid'].isin(upids_to_filter)  # Keep only keep IDs where needed
+]
+
+# Step 3: Define aggregation functions for each column
+agg_funcs = {
+    'exclusion_id': to_set,  # Use a custom function (to_set) for 'exclusion_id'
+    'id_description': concatenate_values,  # Concatenate unique values for id_description
+    'is_effective': concatenate_values,  # Concatenate unique values for is_effective
+    'source': concatenate_values,  # Concatenate unique values for source
+}
+
+# For all other columns, use 'first' as the aggregation function
+other_cols = df2.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
+
+# Default aggregation function for other columns
+for col in other_cols:
+    if col not in agg_funcs:  # Ensure we don't overwrite custom columns
+        agg_funcs[col] = 'first'
+
+# Step 4: Apply groupby with custom aggregation functions
+df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+
+# Output result
+print(df_grouped)
+
+# To check for duplicates in `df_grouped`
+df_grouped['protein_count'].describe()
+df_grouped['upid'].duplicated().value_counts()
+
+df_filtered['upid'].nunique()
+df_grouped['upid'].nunique()
+
+# Check for any remaining duplicates after grouping
+duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
+print(duplicates)
+
+df2['is_effective'].value_counts()
+df_grouped['is_effective'].value_counts()
+
+
 cols_move_end = ['exclusion_id','id_description','is_effective','source']
-
-aggregated_df_reordered = move_cols_to_end(aggregated_df, cols_move_end)
-
-outdf = aggregated_df_reordered.drop(columns=['is_duplicate'])
+df_grouped_reordered = move_cols_to_end(df_grouped, cols_move_end)
 
 
 outfile_df = basedir + "/spneumo_biosample_info_processed.out"
-outdf.to_csv(outfile_df, sep="\t", index=False )
+df_grouped_reordered.to_csv(outfile_df, sep="\t", index=False )
 
 outfile_ids = basedir + "/proc-ids.txt"
-outdf['upid'].to_csv(outfile_ids, index=False)
-
-outdf['protein_count'].describe()
+df_grouped_reordered['upid'].to_csv(outfile_ids, index=False)
 
 #############################
-
-
-# Usage
-ids_to_keep = [29, 94, 96, 99]
-ids_to_omit = [1, 2, 7, 9, 14]
-assembly_levels_to_exclude = ['partial']
-excluded_protein_counts = [0]
-cleaned_data, logs = process_exclusion_data(merged_data_all
-                                            , ids_to_keep
-                                            , ids_to_omit
-                                            , excluded_protein_counts
-                                            , assembly_levels_to_exclude)
-
-print(cleaned_data.head())
-print(logs)
 
