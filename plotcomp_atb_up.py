@@ -31,9 +31,11 @@ df_atb = df_atb_all[df_atb_all['protein_count'] > 0]
 df_up2 = df_up.drop_duplicates(subset = ['biosample'], keep = 'last')
 df_up_dups = df_up[df_up.duplicated(subset= ['biosample', 'upid'])]
 
-df_up_dups.to_csv(basedir + "/up_dups.tsv", sep = "\t")
+#df_up_dups.to_csv(basedir + "/up_dups.tsv", sep = "\t")
 
 df_atb_dups = df_atb[df_atb.duplicated(subset = 'biosample')]
+c = ['SAMN11121455','SAMEA115795954', 'SAMEA4024873D','SAMN03765066']
+df_atb_dups= df_atb[df_atb['biosample'].isin(c)]
 df_atb2 = df_atb.drop_duplicates(subset=['biosample'], keep = 'last')
 
 # Merge data on 'biosample' to see coverage
@@ -57,7 +59,7 @@ categories = ["Only UP", "Both", "Only ATB"]
 counts = [len(only_up), len(both_sources), len(only_atb)]
 
 plt.figure(figsize=(8, 7))
-plt.bar(categories, counts, color=["blue", "peru", "green"], alpha=0.7)
+plt.bar(categories, counts, color=["blue", "green", "yellow"], alpha=1)
 
 # Labels & Title
 plt.xlabel("Data Sources")
@@ -82,7 +84,7 @@ data = pd.DataFrame({
 
 # Plotting using Seaborn
 plt.figure(figsize=(8, 7))
-bar_plot = sns.barplot(x='Data Sources', y='Number of Proteomes', data=data, alpha=0.7, palette=["blue", "peru", "green"])
+bar_plot = sns.barplot(x='Data Sources', y='Number of Proteomes', data=data, alpha=0.99, palette=["blue", "green", "yellow"])
 
 # Labels & Title
 plt.xlabel("Data Sources")
@@ -120,7 +122,7 @@ venn = venn2(subsets=(only_up_count, only_atb_count, both_count), set_labels=("U
 
 # Customize Venn colors
 venn.get_patch_by_id("10").set_color("blue")
-venn.get_patch_by_id("01").set_color("green")
+venn.get_patch_by_id("01").set_color("orange")
 venn.get_patch_by_id("11").set_color("peru")
 
 # Annotate numbers
@@ -136,17 +138,17 @@ bar_width = 0.6
 # Base bars (colored)
 axes[1].bar(categories, 
             total_counts, 
-            color=["blue", "peru", "green"],
-            alpha=0.2, 
+            color=["blue", "peru", "orange"],
+            alpha=1, 
             #color=["lightgrey", "lightgrey", "lightgrey"],
             width=bar_width)
 # Overlay bars (colored with denser hatching for exclusive)
 axes[1].bar(categories, 
             subset_counts, 
-            color=["blue", "peru", "green"], 
-            alpha=0.8, 
+            color=["blue", "peru", "orange"], 
+            alpha=1, 
             width=bar_width, 
-            hatch='////')  # Denser hatching
+            hatch='/')  # Denser hatching
 
 # Labels & Title
 axes[1].set_xlabel("Data Sources")
@@ -154,7 +156,7 @@ axes[1].set_ylabel("Number of Proteomes")
 #axes[1].set_title("Stacked Bar Plot of Proteome Counts")
 axes[1].grid(axis="y", 
              linestyle="--", 
-             alpha=0.5)
+             alpha=1)
 
 # Annotate counts on bars
 for i, (total, subset) in enumerate(zip(total_counts, subset_counts)):
@@ -174,7 +176,7 @@ for i, (total, subset) in enumerate(zip(total_counts, subset_counts)):
 # Custom legend
 legend_elements = [
     Patch(facecolor='lightgrey', label='Total'),
-    Patch(facecolor='lightgrey', hatch='////', label='Exclusive')  # Denser hatch
+    Patch(facecolor='lightgrey', hatch='/', label='Exclusive')  # Denser hatch
 ]
 axes[1].legend(handles=legend_elements)
 
@@ -246,7 +248,7 @@ plt.bar(bins[:-1],
         width=100, 
         align="edge", 
         alpha=0.6, 
-        color="green", 
+        color="orange", 
         #label="ATB", 
         label=f'ATB (Bin size: {bin_width}, Bin count: {num_bins_atb})',
         edgecolor="black")
@@ -273,11 +275,8 @@ legend_fontsize = 11
 #num_bins_up = (up_counts>0).sum()
 #num_bins_atb = (atb_counts>0).sum()
 
-
 df_up["protein_count"].describe()
 df_atb2["protein_count"].describe()
-
-
 
 # Setup the plotting
 plt.figure(figsize=(8, 6))
@@ -299,11 +298,10 @@ sns.histplot(#data=df_up2,
 sns.histplot(data=df_atb2, 
              x='protein_count', 
              bins=bins, 
-             color='green',
+             color='darkorange',
              #label=f'ATB (n={len(df_atb2)}, Bin size: {bin_width}, Bin count: {num_bins_atb})',
              label=f'ATB (n={len(df_atb2)}, Bin count: {num_bins_atb})',
-
-             alpha=0.5, 
+             alpha=0.6,
              #element="step",
              edgecolor = 'k',
              linewidth=1)
