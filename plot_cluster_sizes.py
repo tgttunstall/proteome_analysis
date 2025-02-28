@@ -17,6 +17,8 @@ input_file="/home/pub/Work/data_arise_proteome/spneumo_dataset/outL.tsv"
 input_file ="/home/pub/Work/data_arise_proteome/spneumo_dataset/clusterizes_proteomes"
 input_file = "/home/pub/Work/data_arise_proteome/spneumo_dataset/Labelled_Species_protein_cluster.tsv"
 input_file ="/home/pub/Work/data_arise_proteome/spneumo_dataset/clusterizes_proteomes2"
+input_file ="/home/pub/Work/data_arise_proteome/spneumo_dataset/clusterizes_proteomes_all"
+
 
 
 chunksize=100000
@@ -192,20 +194,10 @@ plt.title('Distribution of Cluster Sizes')
 plt.show()
 
 
-cut -f 1,3 Labelled_Species_protein_cluster.tsv |sort -u|cut -f 1|uniq -c|awk '{print $1}'|sort -n >clusterizes_proteomes
-cut -f 1,3 Labelled_Species_protein_cluster.tsv |sort -u|cut -f 1|sort | uniq -c|awk '{print $1}'|sort -n >clusterizes_proteomes2
 
 
+#######################################################################
 
-####
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Feb 28 11:06:46 2025
-
-@author: tanu
-"""
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -272,9 +264,9 @@ def plot_data(output_file, output_plot, min_proteomes):
     sns.histplot(cluster_sizes, bins=50, kde=True)  # Adjust bins as needed
     #sns.histplot(cluster_sizes1, bins=50, kde=True)  # Adjust bins as needed
 
-    plt.xlabel('Cluster Size (Number of Unique Proteomes)_MY')
+    plt.xlabel('Cluster Size (Number of Unique Proteomes)')
     plt.ylabel('Number of Clusters')
-    plt.title('Distribution of Cluster Sizes (without singletons)')
+    plt.title('Distribution of Cluster Sizes ()')
     plt.yscale('log')  # Consider log scale if appropriate
     plt.tight_layout()
 
@@ -416,3 +408,90 @@ def plot_data(input_file, output_plot, min_proteomes):
     print(f"  Median Cluster Size: {cluster_sizes.median()}")
     print(f"  Standard Deviation: {cluster_sizes.std()}")
     print(f"  Number of Clusters: {len(cluster_sizes)}")
+
+###############################################################################
+#TODO:
+import pandas as pd
+import subprocess
+import os
+
+def process_cluster_data_cmd(input_file, output_file):
+    """
+    Processes cluster data using a command-line pipeline, mimicking the following shell command:
+    cut -f 1,3 input_file | sort -u | cut -f 1 | sort | uniq -c | awk '{print $1}' | sort -n > output_file
+
+    Args:
+        input_file (str): Path to the input TSV file.
+        output_file (str): Path to the output file to store the processed counts.
+    """
+
+    try:
+        # Construct the command-line pipeline
+        cmd = f"""
+        cut -f 1,3 {input_file} | 
+        sort -u | 
+        cut -f 1 | 
+        sort | 
+        uniq -c | 
+        awk '{{print $1}}' | 
+        sort -n
+        """
+
+        # Execute the command using subprocess
+        result = subprocess.run(cmd, shell=True, text=True, capture_output=True, check=True)
+
+        # Write the output to the specified file
+        with open(output_file, 'w') as f:
+            f.write(result.stdout)
+
+        print(f"Processed data saved to {output_file}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}")
+        print(f"Stderr: {e.stderr}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+def process_cluster_data_pandas(input_file, output_file):
+    """
+    Processes cluster data using pandas to mimic the following shell command:
+    cut -f 1,3 input_file | sort -u | cut -f 1 | sort | uniq -c | awk '{print $1}' | sort -n > output_file
+    
+    Args:
+        input_file (str): Path to the input TSV file.
+        output_file (str): Path to the output file to store the processed counts.
+    """
+    try:
+        # Read the data, selecting and naming the columns
+        df = pd.read_csv(input_file, sep='\t', usecols=[0, 2], names=['cluster_id', 'proteomes'], header=None)
+
+        # Create unique combinations of cluster_id and proteomes
+        df['combined'] = df['cluster_id'].astype(str) + '_' + df['proteomes'].astype(str)
+        unique_combinations = df['combined'].unique()
+
+        # Extract cluster_id from unique combinations
+        cluster_ids = [combo.split('_')[0] for combo in unique_combinations]
+
+        # Count occurrences of each cluster_id
+        cluster_counts = pd.Series(cluster_ids).value_counts().sort_index()
+
+        # Save the counts to a file
+        cluster_counts.to_csv(output_file, sep='\t', header=False)
+        
+        print(f"Processed data saved to {output_file}")
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+if __name__ == "__main__":
+    # Example usage:
+    input_file = "outL.tsv"  # Replace with your input file path
+    output_file = "clusterizes_proteomes2"  # Replace with your desired output file path
+    
+    # Call the function
+    process_cluster_data_pandas(input_file, output_file)  # You can choose either Pandas or CMD
+
+    #Verify to make sure they both work properly
+    process_cluster_data_cmd(input_file, "clusterizes_proteomes2_cmd")
