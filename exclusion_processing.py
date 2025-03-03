@@ -21,8 +21,8 @@ import numpy as np
 ######
 # Read data
 homedir = os.path.expanduser("~")
-#basedir =  homedir + "/Documents/arise/spneumo_dataset"
-basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+basedir =  homedir + "/Documents/arise/spneumo_dataset"
+#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 # Load TSV files
 up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
@@ -93,7 +93,7 @@ def merge_tsv_files(file1_path, file2_path,
 merged_data_all = merge_tsv_files(file1_path=up_spneumo_proteomes, 
                                   file2_path=exclusion_reasons,
                                   include_columns="All")
-
+a = merged_data_all[merged_data_all['gc_set_acc'].isin(['GCA_001255215.2', 'GCA_001255215.1'])]
 # Merging and specifying only certain columns to include from the second file
 merged_data_specific = merge_tsv_files(file1_path=up_spneumo_proteomes, 
                                   file2_path=exclusion_reasons,
@@ -104,6 +104,21 @@ print(merged_data_all.head())
 
 #print("\nMerged with specific columns:")
 #print(merged_data_specific.head())
+
+###############################################################################
+# checkM
+checkM_ncbi = pd.read_csv(basedir + "/CheckM_report_prokaryotes.txt", sep = "\t")
+upcheckM1= merged_data_all[merged_data_all['gc_set_acc'].isin(checkM_ncbi['#genbank-accession'])]
+upNOTcheckM1 = merged_data_all[~merged_data_all['gc_set_acc'].isin(checkM_ncbi['#genbank-accession'])]
+
+
+checkM_sp = pd.read_csv(basedir + "/CheckM_report_streptococcus_pneumoniae.txt", sep = "\t")
+upcheckM = merged_data_all[merged_data_all['gc_set_acc'].isin(checkM_sp['#genbank-accession'])]
+upNOTcheckM = merged_data_all[~merged_data_all['gc_set_acc'].isin(checkM_sp['#genbank-accession'])]
+
+
+(upcheckM1 == upcheckM).all()
+(upNOTcheckM1 == upNOTcheckM).all()
 #################
 # code for is_effective == t and exclusion_ids 1,7,9,14,29,94,96,99
 
@@ -174,11 +189,14 @@ def move_cols_to_end(df, cols):
 ############
 df = merged_data_all.copy()
 print(f"\nLength of input data: {len(df)}")
+print(f"\nLength of input data unique proteomes: {df['upid'].nunique()}")
 print(f"\nCount effective exclusions:\n {df['is_effective'].value_counts()}")
 
 print(f"\nExcluding proteomes with protein count: {excluded_protein_counts}")
 df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
+print(f"\nLength of filtered data unique proteomes: {df2['upid'].nunique()}")
 print(f"\nLength of df: {len(df2)}")
+print(f"\nNo of unique proteomes removed: {df['upid'].nunique() - df2['upid'].nunique()}")
 
 print(f"\nExcluding proteomes with assembly level: {assembly_level_to_exclude}")
 df2 = df2[~df2['assembly_level'].isin(assembly_level_to_exclude)]
@@ -199,6 +217,10 @@ print(f"\nLength of df: {len(df2)}")
 
 print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
+ids_to_keep = [29, 94, 96, 99]
+#ids_to_omit = [1, 2, 7, 9, 14, 26] #26514
+ids_to_omit = [1, 7, 9, 14, 2] 
+ids_to_omit = [1, 7, 9, 14] 
 
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
@@ -211,6 +233,11 @@ upids_to_remove = grouped[
 upids_to_filter = grouped[
     grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
 ].index
+
+
+upids_to_remove = grouped[
+    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
+
 
 a = upids_to_remove.to_list() + upids_to_filter.to_list()
 
@@ -261,6 +288,10 @@ print(duplicates)
 df2['is_effective'].value_counts()
 df_grouped['is_effective'].value_counts()
 df_grouped['protein_count'].describe()
+
+print(f"\nNo of unique proteomes in final: {df_grouped['upid'].nunique()}")
+print(f"\nNo of unique proteomes removed: {df['upid'].nunique() - df_grouped['upid'].nunique()}")
+
 ######
 
 cols_move_end = ['exclusion_id','id_description','is_effective','source']
