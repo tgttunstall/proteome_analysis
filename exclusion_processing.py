@@ -135,69 +135,11 @@ print(merged_data_all.head())
 #print(merged_data_specific.head())
 
 ###############################################################################
-# checkM: See next!
-# FIXME: later!
-checkM_filepath = basedir + "/CheckM_report_prokaryotes.txt"
-#checkM_ncbi = pd.read_csv(basedir + "/CheckM_report_prokaryotes.txt", sep = "\t")
-checkM_ncbi = pd.read_csv(checkM_filepath, sep = "\t")
-upcheckM1= merged_data_all[merged_data_all['gc_set_acc'].isin(checkM_ncbi['#genbank-accession'])]
-upNOTcheckM1 = merged_data_all[~merged_data_all['gc_set_acc'].isin(checkM_ncbi['#genbank-accession'])]
 
-checkM_ncbi.columns
-
-checkM_ncbi['gc_set_acc']
-checkM_ncbi['#genbank-accession']
-
-df_with_checkM = merge_data(file1=merged_data_all,
-                                file2=checkM_ncbi,
-                                file1_merge_col="gc_set_acc", 
-                                file2_merge_col="#genbank-accession", 
-                                include_columns=['#genbank-accession', 'refseq-accession', 'checkm-completeness','checkm-contamination'],
-                                join_type='left',
-                                delimiter = '\t')
-
-df_with_checkM['species_taxid'].value_counts()
-df_with_checkM['species-taxid'].value_counts()
-
-df_with_checkM['proteome_taxid'].value_counts()
-df_with_checkM['taxid'].value_counts()
-
-
-# 
-# Drop rows where either 'species_taxid' or 'species-taxid' is NaN
-small_df = df_with_checkM.dropna(subset=['species_taxid', 'species-taxid', 'proteome_taxid', 'taxid'])
-
-# Perform the comparison and create a new column with the result
-small_df['comparison_result'] = small_df['species_taxid'] == small_df['species-taxid']
-small_df['comparison_result2'] = small_df['proteome_taxid'] == small_df['taxid']
-
-all_equal = small_df['comparison_result'].all()
-print("All non-NaN values are equal:", all_equal)
-
-all_equal2 = small_df['comparison_result2'].all()
-print("All non-NaN values are equal:", all_equal2)
-
-
-print(f"\nLength of checkM_ncbi: {len(checkM_ncbi)}")
-
-print(f"\nLength of available checkM for spneumo acc to GA: {len(upcheckM1)}")
-print(f"\nTotal unique UP proteomes with available checkM according to GA: {upcheckM1['upid'].nunique()}") #10161
-
-print(f"\nLength of unavailable checkM for spneumo acc to GA: {len(upNOTcheckM1)}")
-print(f"\nTotal unique UP proteomes with UNavailable checkM according to GA: {upNOTcheckM1['upid'].nunique()}") #16588
-
-#checkM_sp = pd.read_csv(basedir + "/CheckM_report_streptococcus_pneumoniae.txt", sep = "\t")
-#upcheckM = merged_data_all[merged_data_all['gc_set_acc'].isin(checkM_sp['#genbank-accession'])]
-#upNOTcheckM = merged_data_all[~merged_data_all['gc_set_acc'].isin(checkM_sp['#genbank-accession'])]
-
-#(upcheckM1 == upcheckM).all()
-#(upNOTcheckM1 == upNOTcheckM).all()
 
 #################
 # code for is_effective == t and exclusion_ids 1,7,9,14,29,94,96,99
 
-assembly_level_to_exclude = ['partial']
-excluded_protein_counts = [0]
 
 ###############################################################################
 def process_exclusion_data(df, 
@@ -241,8 +183,14 @@ def process_exclusion_data(df,
     print(len(df2))
     
     
-    
 ############
+# Usage
+#ids_to_keep = [29, 94, 96, 99]
+ids_to_omit = [1, 7, 9, 14, 2]  #26536   #26546
+assembly_level_to_exclude = ['partial']
+excluded_protein_counts = [0]
+
+
 # Custom aggregation function to concatenate values
 def concatenate_values(series):
     return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
@@ -295,67 +243,46 @@ a2['partial']
 
 print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
-# Usage
-ids_to_keep = [29, 94, 96, 99]
-ids_to_omit = [1, 7, 9, 14, 2]  #26536   #26546
+
 
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
-#grouped2 = df2.groupby('upid')['exclusion_id'].agg(list)
+#grouped = df2.groupby('upid')['exclusion_id'].agg(list)
 print(f"\nLength of unique proteomes in grouped: {len(grouped)}")
 
-df2.groupby('upid').nunique() # should match
+#upids_to_remove = grouped[
+#    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))
+#].index
+
+#upids_to_filter = grouped[
+#    grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
+#].index
+#print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
 
 upids_to_remove = grouped[
-    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))
-].index
-
-if len(ids_to_keep) > 0: 
-    upids_to_filter = grouped[
-        grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
-    ].index
+    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
+print(f"\nLength of unique proteomes to remove with second criteria: {(upids_to_remove).nunique()}")
 
 print(f"\nLength of unique proteomes to remove: {(upids_to_remove).nunique()}")
-print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
-#print(f"\nLength of Total unique proteomes to : {upids_to_filter.nunique()}")
-
-check1 = df[df['upid'].isin(upids_to_filter)]
-check1['upid'].nunique()
-a = check1.groupby('upid')['exclusion_id'].agg(list)
-df_grouped1['upid'].isin(upids_to_filter).sum()
-upids_to_remove1 = grouped[
-    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
-print(f"\nLength of unique proteomes to remove with second criteria: {(upids_to_remove1).nunique()}")
-
-
-a = upids_to_remove.to_list() + upids_to_filter.to_list()
-len(a)
-check2 =df2[~df2['upid'].isin(upids_to_remove.to_list() + upids_to_filter.to_list())]
-#some upids to check: UP000000685, UP000002642, UP000235432 (8772)
 
 #
 # Step 2: Filter DataFrame
 df_filtered = df2[~df2['upid'].isin(upids_to_remove)]  # Remove unwanted upids
-df_filtered = df_filtered[
-    df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
-    ~df_filtered['upid'].isin(upids_to_filter)  # Keep only keep IDs where needed
-]
+#df_filtered = df_filtered[
+#    df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
+#    ~df_filtered['upid'].isin(upids_to_filter)  # Keep only keep IDs where needed
+#]
 print(f"\nLength of unique proteomes to df_filtered: {(df_filtered['upid']).nunique()}")
-
-
-# Step 2: Filter DataFrame {ALT}
-
-df_filtered1 = df2[~df2['upid'].isin(upids_to_remove1)]  # Remove unwanted upids
-print(f"\nLength of unique proteomes to df_filtered: {(df_filtered1['upid']).nunique()}")
 
 
 # Step 3: Define aggregation functions for each column
 agg_funcs = {
-    'exclusion_id': to_set,  # Use a custom function (to_set) for 'exclusion_id'
-    'id_description': concatenate_values,  # Concatenate unique values for id_description
-    'is_effective': concatenate_values,  # Concatenate unique values for is_effective
-    'source': concatenate_values,  # Concatenate unique values for source
+    'exclusion_id': lambda x: set(x),  # Directly using set with lambda
+    'id_description': lambda x: ', '.join(str(i) for i in x.unique()),  # Handling unique concatenation
+    'is_effective': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
+    'source': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
 }
+
 
 # For all other columns, use 'first' as the aggregation function
 other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
@@ -369,20 +296,12 @@ for col in other_cols:
 df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
 print(f"\nLength of unique proteomes in final df: {(df_grouped['upid']).nunique()}")
 
-# Step 4: Apply groupby with custom aggregation functions
-df_grouped1 = df_filtered1.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
-print(f"\nLength of unique proteomes in final df1: {(df_grouped1['upid']).nunique()}")
-
 # Output result
 print(df_grouped)
 
 # To check for duplicates in `df_grouped`
 df_grouped['protein_count'].describe()
 df_grouped['upid'].duplicated().value_counts()
-
-df_grouped1['protein_count'].describe()
-df_grouped1['upid'].duplicated().value_counts()
-
 
 df_filtered['upid'].nunique()
 df_grouped['upid'].nunique()
@@ -391,7 +310,6 @@ df_grouped['upid'].nunique()
 duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
 print(duplicates)
 
-df2['is_effective'].value_counts()
 df_grouped['is_effective'].value_counts()
 df_grouped['protein_count'].describe()
 
@@ -412,3 +330,6 @@ df_grouped_reordered['upid'].to_csv(outfile_ids, index=False)
 
 #############################
 
+fcheck  = ['UP000074114', 'UP000299029']
+z = df_grouped_reordered[df_grouped_reordered['upid'].isin(fcheck)]
+z = df[df['upid'].isin(fcheck)]
