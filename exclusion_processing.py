@@ -289,22 +289,15 @@ a2['partial']
 #4 upids belongig to 10 records have partial
 #	upid
 #3944	UP000243639
-#3945	UP000243639
-#3946	UP000243639
 #4450	UP000243565
-#4451	UP000243565
-#4452	UP000243565
 #26283	UP000242121
-#26284	UP000242121
-#26285	UP000242121
 #26304	UP000464300
 
 print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
 # Usage
 ids_to_keep = [29, 94, 96, 99]
-ids_to_omit = [1, 7, 9, 14, 2]    #26546
-
+ids_to_omit = [1, 7, 9, 14, 2]  #26536   #26546
 
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
@@ -326,7 +319,10 @@ print(f"\nLength of unique proteomes to remove: {(upids_to_remove).nunique()}")
 print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
 #print(f"\nLength of Total unique proteomes to : {upids_to_filter.nunique()}")
 
-
+check1 = df[df['upid'].isin(upids_to_filter)]
+check1['upid'].nunique()
+a = check1.groupby('upid')['exclusion_id'].agg(list)
+df_grouped1['upid'].isin(upids_to_filter).sum()
 upids_to_remove1 = grouped[
     grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
 print(f"\nLength of unique proteomes to remove with second criteria: {(upids_to_remove1).nunique()}")
@@ -344,6 +340,14 @@ df_filtered = df_filtered[
     df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
     ~df_filtered['upid'].isin(upids_to_filter)  # Keep only keep IDs where needed
 ]
+print(f"\nLength of unique proteomes to df_filtered: {(df_filtered['upid']).nunique()}")
+
+
+# Step 2: Filter DataFrame {ALT}
+
+df_filtered1 = df2[~df2['upid'].isin(upids_to_remove1)]  # Remove unwanted upids
+print(f"\nLength of unique proteomes to df_filtered: {(df_filtered1['upid']).nunique()}")
+
 
 # Step 3: Define aggregation functions for each column
 agg_funcs = {
@@ -354,7 +358,7 @@ agg_funcs = {
 }
 
 # For all other columns, use 'first' as the aggregation function
-other_cols = df2.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
+other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
 
 # Default aggregation function for other columns
 for col in other_cols:
@@ -363,6 +367,11 @@ for col in other_cols:
 
 # Step 4: Apply groupby with custom aggregation functions
 df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+print(f"\nLength of unique proteomes in final df: {(df_grouped['upid']).nunique()}")
+
+# Step 4: Apply groupby with custom aggregation functions
+df_grouped1 = df_filtered1.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+print(f"\nLength of unique proteomes in final df1: {(df_grouped1['upid']).nunique()}")
 
 # Output result
 print(df_grouped)
@@ -370,6 +379,10 @@ print(df_grouped)
 # To check for duplicates in `df_grouped`
 df_grouped['protein_count'].describe()
 df_grouped['upid'].duplicated().value_counts()
+
+df_grouped1['protein_count'].describe()
+df_grouped1['upid'].duplicated().value_counts()
+
 
 df_filtered['upid'].nunique()
 df_grouped['upid'].nunique()
