@@ -243,7 +243,9 @@ a2['partial']
 
 print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
-
+ids_to_keep = [29, 94, 96, 99]
+#ids_to_omit = [1, 2, 7, 9, 14, 26] #26514
+ids_to_omit = [1, 7, 9, 14, 2] 
 
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
