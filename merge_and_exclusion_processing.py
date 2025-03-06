@@ -8,6 +8,8 @@ Created on Thu Mar  6 16:11:58 2025
 # FIXME
 import from processing_functions merge_data, process_up_exclusions
 
+# TODO: add cmd args to call these files
+
 # Read data
 homedir = os.path.expanduser("~")
 #basedir =  homedir + "/Documents/arise/spneumo_dataset"
