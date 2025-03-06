@@ -21,8 +21,8 @@ import numpy as np
 ######
 # Read data
 homedir = os.path.expanduser("~")
-#basedir =  homedir + "/Documents/arise/spneumo_dataset"
-basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+basedir =  homedir + "/Documents/arise/spneumo_dataset"
+#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 # Load TSV files
 up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
@@ -39,8 +39,6 @@ exclusion_reasons = basedir + "/exclusion_reasons.tsv"
 #print(f"\nLength of UP DF after removing proteomes with 0 proteins: {len(df_up_all)}")
 
 ###############################################################################
-import pandas as pd
-
 def merge_data(file1, file2, 
                     file1_merge_col='exclusion_id', 
                     file2_merge_col='id', 
@@ -120,10 +118,9 @@ merged_data_all = merge_data(file1=up_spneumo_proteomes,
 
 upid_nunique_source = merged_data_all['upid'].nunique()
 print(f"\nLength of source data: {len(merged_data_all)}")
+print(f"\nShape of source data: {(merged_data_all).shape}")
 print(f"Number of unique upids in source data: {upid_nunique_source}")
-
-print(merged_data_all.head())
-
+#print(merged_data_all.head())
 
 #a = merged_data_all[merged_data_all['gc_set_acc'].isin(['GCA_001255215.2', 'GCA_001255215.1'])]
 # Merging and specifying only certain columns to include from the second file
@@ -135,16 +132,9 @@ print(merged_data_all.head())
 #print(merged_data_specific.head())
 
 ###############################################################################
-
-
-#################
-# code for is_effective == t and exclusion_ids 1,7,9,14,29,94,96,99
-
-
-###############################################################################
 def process_exclusion_data(df, 
-                           ids_to_keep, 
-                           ids_to_omit, 
+                           ids_to_keep=[], 
+                           ids_to_omit=[], 
                            excluded_protein_counts=[0], 
                            assembly_level_to_exclude = ['partial', 'full']
                            ):
@@ -185,19 +175,20 @@ def process_exclusion_data(df,
     
 ############
 # Usage
-#ids_to_keep = [29, 94, 96, 99]
+ids_to_keep = [29, 94, 96, 99]
+#ids_to_keep = []
 ids_to_omit = [1, 7, 9, 14, 2]  #26536   #26546
 assembly_level_to_exclude = ['partial']
 excluded_protein_counts = [0]
 
 
 # Custom aggregation function to concatenate values
-def concatenate_values(series):
-    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
+#def concatenate_values(series):
+#    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
 
 # Custom aggregation function for 'set'
-def to_set(series):
-    return set(series)
+#def to_set(series):
+#    return set(series)
 
 # reorder cols
 def move_cols_to_end(df, cols):
@@ -243,10 +234,6 @@ a2['partial']
 
 print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
 
-ids_to_keep = [29, 94, 96, 99]
-#ids_to_omit = [1, 2, 7, 9, 14, 26] #26514
-ids_to_omit = [1, 7, 9, 14, 2] 
-
 # Step 1: Identify upids to remove
 grouped = df2.groupby('upid')['exclusion_id'].agg(set)
 #grouped = df2.groupby('upid')['exclusion_id'].agg(list)
@@ -264,38 +251,54 @@ print(f"\nLength of unique proteomes in grouped: {len(grouped)}")
 upids_to_remove = grouped[
     grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
 print(f"\nLength of unique proteomes to remove with second criteria: {(upids_to_remove).nunique()}")
-
 print(f"\nLength of unique proteomes to remove: {(upids_to_remove).nunique()}")
 
-#
-# Step 2: Filter DataFrame
+# Step 2: Filter DataFrame on ids_to_omit
 df_filtered = df2[~df2['upid'].isin(upids_to_remove)]  # Remove unwanted upids
-#df_filtered = df_filtered[
-#    df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
-#    ~df_filtered['upid'].isin(upids_to_filter)  # Keep only keep IDs where needed
-#]
-print(f"\nLength of unique proteomes to df_filtered: {(df_filtered['upid']).nunique()}")
 
+if len(ids_to_keep) > 0:
+    upids_to_filter = grouped[
+        grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
+        ].index
+    print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
+    print("\nThis is for cases when the same upid has exclusion_ids BOTH in ids_to_keep + ids_to_omit")
+    
+    # Step 2a: Filter DataFrame on ids_to_keep if it exists
+    df_filtered = df_filtered[
+        df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
+        ~df_filtered['upid'].isin(upids_to_filter)
+    ]
+    print(f"\nLength of unique proteomes in df_filtered: {(df_filtered['upid']).nunique()}")
+else:
+    print(f"\nNo UPIDs to filter as the ids_to_keep is empty: {ids_to_keep}")
 
+#########################################################
 # Step 3: Define aggregation functions for each column
 agg_funcs = {
-    'exclusion_id': lambda x: set(x),  # Directly using set with lambda
+    #'exclusion_id': lambda x: set(x),  # Directly using set with lambda
+    'exclusion_id': lambda x: ', '.join(str(i) for i in x.unique()),  # Directly using set with lambda
     'id_description': lambda x: ', '.join(str(i) for i in x.unique()),  # Handling unique concatenation
     'is_effective': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
     'source': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
+    'protein_count' : lambda x: set()
 }
 
 
 # For all other columns, use 'first' as the aggregation function
-other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
+#other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
+other_cols = df_filtered.columns.difference(['upid', 'protein_count']).tolist()
 
 # Default aggregation function for other columns
 for col in other_cols:
+    #print (col)
     if col not in agg_funcs:  # Ensure we don't overwrite custom columns
+        print(col)
         agg_funcs[col] = 'first'
-
+#########################################################
 # Step 4: Apply groupby with custom aggregation functions
-df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+#df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+df_grouped = df_filtered.groupby(['upid']).agg(agg_funcs).reset_index()
+
 print(f"\nLength of unique proteomes in final df: {(df_grouped['upid']).nunique()}")
 
 # Output result
@@ -310,6 +313,8 @@ df_grouped['upid'].nunique()
 
 # Check for any remaining duplicates after grouping
 duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
+duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
+
 print(duplicates)
 
 df_grouped['is_effective'].value_counts()
@@ -324,10 +329,11 @@ cols_move_end = ['exclusion_id','id_description','is_effective','source']
 df_grouped_reordered = move_cols_to_end(df_grouped, cols_move_end)
 
 
-outfile_df = basedir + "/spneumo_biosample_info_processed.out"
+##########################################
+outfile_df = basedir + "/spneumo_biosample_info_processed1.out"
 df_grouped_reordered.to_csv(outfile_df, sep="\t", index=False )
 
-outfile_ids = basedir + "/proc-ids.txt"
+outfile_ids = basedir + "/proc-ids1.txt"
 df_grouped_reordered['upid'].to_csv(outfile_ids, index=False)
 
 #############################
