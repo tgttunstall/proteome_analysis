@@ -9,64 +9,33 @@ import numpy as np
 #import random
 #import argparse
 #from tqdm import tqdm
-
-######
-# EXCLUSION processing
-#if a up proteome is excluded (is_excluded == t), then look for exclusion_immunity. :
-#    If exclusion_immunity==t, keep it.
-#    If exclusion_immunity==f, move on to exclusion_id.
-#    If exclusion_id = 2, then omit # partial
-#    If exclusion_id = 1, then omit # genome length too large
-#    If exclusion_id = 7, then omit # genome length too small
-######
-# Read data
-homedir = os.path.expanduser("~")
-basedir =  homedir + "/Documents/arise/spneumo_dataset"
-#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
-
-# Load TSV files
-up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
-exclusion_reasons = basedir + "/exclusion_reasons.tsv"
-
-# Read the data
-#df_up_original = pd.read_csv(up_file, sep="\t")
-#print(f"\nDF shape: {df_up_original.shape}")
-#print(f"\nLength of UP DF: {len(df_up_original)}")
-
-# Step 0: omit the ones with protein_count == 0
-#df_up_all = df_up_original[df_up_original['protein_count']> 0]
-#print(f"\nNo. of of entries with 0 proteins: {len(df_up_original[df_up_original['protein_count']== 0])}")
-#print(f"\nLength of UP DF after removing proteomes with 0 proteins: {len(df_up_all)}")
-
 ###############################################################################
 def merge_data(file1, file2, 
-                    file1_merge_col='exclusion_id', 
-                    file2_merge_col='id', 
-                    include_columns="All",
-                    join_type='left',
-                    delimiter = "\t",
-                    drop_cols=[]):
+               file1_merge_col='exclusion_id', 
+               file2_merge_col='id', 
+               join_type='left',
+               delimiter="\t",
+               drop_cols=['id']):
     """
-    Merges two datasets based on a merge column. Allows for different column names
-    in each dataset for the merge key and includes specified columns from the second dataset or all by default.
+    Merges two datasets based on a merge column. Includes all columns from both datasets.
     The type of join performed can be specified to control how rows from each dataset are included in the result.
     Each dataset can either be a DataFrame or a file path to a TSV file.
 
     Args:
     - file1 (str or pd.DataFrame): First dataset or path to the TSV file.
-    - file2 (str or pd.DataFrame): Second dataset or path to the TSV file, containing additional data like exclusion meanings.
+    - file2 (str or pd.DataFrame): Second dataset or path to the TSV file, containing additional data.
     - file1_merge_col (str): Column name in the first dataset to merge on. Default is 'exclusion_id'.
     - file2_merge_col (str): Column name in the second dataset to merge on. Default is 'id'.
-    - include_columns (str or list): Specific columns from the second dataset to add to the first. If "All", all columns are added.
     - join_type (str): Type of join to perform during the merge. Options include 'left', 'right', 'outer', 'inner'. Default is 'left'.
+    - delimiter (str): Delimiter used in the file, default is tab ('\t').
+    - drop_cols (list): Columns to drop after the merge.
 
     Returns:
     - pd.DataFrame: A DataFrame with the merged content.
 
     Raises:
-    - ValueError: If any specified columns in `include_columns` do not exist in the second dataset.
+    - ValueError: If there are any issues loading the data.
     """
-
     # Load or use data frames
     if isinstance(file1, str):
         df1 = pd.read_csv(file1, sep=delimiter)
@@ -82,262 +51,199 @@ def merge_data(file1, file2,
     else:
         raise ValueError("file2 must be a filepath or a DataFrame")
         
-    # Rename the merge column in file2 if necessary
-    #if file2_merge_col != file1_merge_col:
-    #    df2.rename(columns={file2_merge_col: file1_merge_col}, inplace=True)
-
-    # Check if specific columns are to be included from the second file
-    if include_columns != "All":
-        if not set(include_columns).issubset(df2.columns):
-            missing_cols = set(include_columns) - set(df2.columns)
-            raise ValueError(f"The following columns are specified in include_columns but do not exist in the second dataset: {missing_cols}")
-        columns_to_include = [file1_merge_col] + include_columns
-        df2 = df2[columns_to_include]
-
-    # Merge the dataframes on the specified column
-    #merged_df = pd.merge(df1, df2, on=file1_merge_col, how=join_type)
+    # Merge the dataframes on the specified columns
     merged_df = pd.merge(df1, df2, left_on=file1_merge_col, right_on=file2_merge_col, how=join_type)
     
     # Drop specified columns if drop_cols is not None or empty
-    if drop_cols and len(drop_cols) > 0:
+    if drop_cols:
+        # Check if the columns to be dropped exist in the merged DataFrame
+        missing_drop_cols = [col for col in drop_cols if col not in merged_df.columns]
+        if missing_drop_cols:
+            raise ValueError(f"The following columns to drop do not exist in the DataFrame: {missing_drop_cols}")
         merged_df = merged_df.drop(drop_cols, axis=1)
-
+        
+    #TODO:
+    # Add sanity check to check the no. of rows and cols
+    
     return merged_df
 
 ###############################################################################
-# Example usage:
-# Merging and including all columns from the second file (default behavior)
-merged_data_all = merge_data(file1=up_spneumo_proteomes, 
-                                  file2=exclusion_reasons,
-                                  file1_merge_col='exclusion_id', 
-                                  file2_merge_col='id', 
-                                  include_columns="All",
-                                  join_type='left',
-                                  delimiter ='\t',
-                                  drop_cols = ['id'])
 
-upid_nunique_source = merged_data_all['upid'].nunique()
-print(f"\nLength of source data: {len(merged_data_all)}")
-print(f"\nShape of source data: {(merged_data_all).shape}")
-print(f"Number of unique upids in source data: {upid_nunique_source}")
-#print(merged_data_all.head())
-
-#a = merged_data_all[merged_data_all['gc_set_acc'].isin(['GCA_001255215.2', 'GCA_001255215.1'])]
-# Merging and specifying only certain columns to include from the second file
-#merged_data_specific = merge_tsv_files(file1_path=up_spneumo_proteomes, 
-#                                  file2_path=exclusion_reasons,
-#                                  include_columns=['id_description'])
-
-#print("\nMerged with specific columns:")
-#print(merged_data_specific.head())
-
-###############################################################################
-def process_exclusion_data(df, 
+def process_up_exclusions(df,
+                           exclusion_id_colname='exclusion_id',
+                           grouping_colname = 'upid',
+                           protein_count_colname = 'protein_count',
+                           colnames_for_value_merging=[],
                            ids_to_keep=[], 
                            ids_to_omit=[], 
                            excluded_protein_counts=[0], 
-                           assembly_level_to_exclude = ['partial', 'full']
+                           assembly_level_to_exclude=['partial', 'full'],
+                           reorder_cols=True
                            ):
+    
     """
     Processes exclusion reasons from a dataset, handling cases where multiple exclusion reasons
-    may exist for the same UPID, applying logic to keep or omit records based on user-defined criteria.
+    may exist for the same UPID. The function applies logic to keep or omit records based on user-defined criteria,
+    and manages the aggregation of values when multiple records are merged into a single entry.
 
     Args:
-    - file_path (str): Path to the TSV file containing the data.
-    - ids_to_keep (list): List of exclusion IDs that, if found, will lead to keeping the record.
-    - ids_to_omit (list): List of exclusion IDs that, if found, will lead to omitting the record.
-    - excluded_protein_counts (list): List of protein counts that should lead to complete removal of the record.
-    - check_immunity (bool): Whether to check the 'exclusion_immunity' field before processing.
+    - df (pd.DataFrame): DataFrame containing the protein data.
+    - exclusion_id_colname (str): The name of the column containing exclusion IDs. Default is 'exclusion_id'.
+    - grouping_colname (str): The name of the column to group data by, typically UPID. Default is 'upid'.
+    - protein_count_colname (str): The column name where protein counts are stored. Default is 'protein_count'.
+    - colnames_for_value_merging (list): List of column names whose values should be merged during grouping.
+    - ids_to_keep (list): List of exclusion IDs that, if found within a group, will prevent records in that group from being omitted.
+    - ids_to_omit (list): List of exclusion IDs that, if found within a group, will cause records in that group to be omitted.
+        NB: If a record occurs in both ids_to_keep AND ids_to_omit, the record for the ids_to_keep will take precedence. If there are multiple, only one will be kept.
+        This is best left empty to only basically just let the ids_to_omit filter out the bad records! if you still need this complex filtering, it is here to do that:-)
+    - excluded_protein_counts (list): Protein counts that should lead to the exclusion of the record.
+    - assembly_level_to_exclude (list): List of assembly levels that should lead to the exclusion of the record.
+    - reorder_cols (bool): If True, reorders columns after processing, placing 'colnames_for_value_merging' at the end.
 
     Returns:
-    - pd.DataFrame: Processed DataFrame with UPIDs and their exclusion reasons collapsed, filtered by the provided criteria.
-    - pd.DataFrame: Log DataFrame containing details of any special conditions or flags.
+    - pd.DataFrame: The processed DataFrame with UPIDs and their exclusion reasons collapsed, filtered by the provided criteria.
     """
-    # Load the data file
-    #df = pd.read_csv(file_path, sep='\t')
-
-    # Initialize log data structure
-    #log_data = {
-    #    'multiple_ids_to_keep': [],
-    #    'multiple_ids_to_omit': [],
-    #    'conflicted_ids': []
-    #}
-
-
-    print(f"\nExcluding proteomes with protein count: {excluded_protein_counts}")
-    df2 = df[~df['protein_count'].isin(excluded_protein_counts)]
-    print(len(df2))
     
-    print(f"\nExcluding proteomes with assembly level: {assembly_level_to_exclude}")
-    df2 = df2[~df2['assembly_level'].isin(assembly_level_to_exclude)]
-    print(len(df2))
+    ###########################
+    # internal functions used
+    def move_cols_to_end(df, cols):
+        return df[[x for x in df.columns if not x in cols] + cols]
+    
+    # Define aggregation functions for each column
+    
+    # This is to check if protein_count during grouping is a single value.
+    def check_single_value(series):
+        unique_values = set(series)
+        if len(unique_values) == 1:
+            return next(iter(unique_values))  # Convert the single element set back to an integer
+        else:
+            raise ValueError("More than one unique value found in protein_count")
+
+    # Update aggregation functions dictionary
+    agg_funcs = {
+        #col: (lambda x: set(x) if col == 'protein_count' else ', '.join(str(i) for i in x.unique()))
+        #col: (lambda x: check_single_value if col == protein_count_colname else ', '.join(str(i) for i in x.unique()))
+        col: (lambda x, col=col: check_single_value(x) if col == protein_count_colname else ', '.join(str(i) for i in x.unique()))
+        for col in colnames_for_value_merging+[protein_count_colname]
+    }
+
+            
+    ################################################
+    print(f"\nLength of input data: {len(df)}")
+    print(f"\nLength of input data unique proteomes: {df['upid'].nunique()}")
+
+    # STEP 0:
+    print("\nSTEP 0")
+    print(f"|--Excluding proteomes with protein count: {excluded_protein_counts}")
+    df1 = df[~df['protein_count'].isin(excluded_protein_counts)]
+    print(f"|--Length of data after excluding such proteomes: {len(df1)}")
+    print(f"|--Length of unique proteomes in data: {df1[grouping_colname].nunique()}")
+    print(f"|--No. of unique proteomes removed: {df[grouping_colname].nunique() - df1[grouping_colname].nunique()}")
+
+    # STEP 1: 
+    print("\nSTEP 1")
+    print(f"|--Excluding proteomes with assembly level: {assembly_level_to_exclude}")
+    df2 = df1[~df1['assembly_level'].isin(assembly_level_to_exclude)]
+    print(f"|--Length of data after excluding such proteomes: {len(df2)}")
+    print(f"|--Length of unique proteomes in data: {df2['upid'].nunique()}")
+    print(f"|--No. of unique proteomes removed: {df1[grouping_colname].nunique() - df2[grouping_colname].nunique()}")
     
     
-############
-# Usage
-ids_to_keep = [29, 94, 96, 99]
-#ids_to_keep = []
-ids_to_omit = [1, 7, 9, 14, 2]  #26536   #26546
-assembly_level_to_exclude = ['partial']
-excluded_protein_counts = [0]
+    # STEP 2: Grouping by 
+    print("\nSTEP 2")
+    print(f"|--Grouping data by: {grouping_colname}")
+    print(f"|----and aggregating values for: {exclusion_id_colname}")
+    #grouped = df2.groupby('upid')['exclusion_id'].agg(set) #or  list 
+    grouped = df2.groupby(grouping_colname)[exclusion_id_colname].agg(set)
+    print(f"|--Length of unique proteomes in grouped data: {len(grouped)}")
 
 
-# Custom aggregation function to concatenate values
-#def concatenate_values(series):
-#    return ', '.join(map(str, series.unique()))  # Concatenate unique values as strings
-
-# Custom aggregation function for 'set'
-#def to_set(series):
-#    return set(series)
-
-# reorder cols
-def move_cols_to_end(df, cols):
-    return df[[x for x in df.columns if not x in cols] + cols]
-
-############
-df = merged_data_all.copy()
-df_unique = df.drop_duplicates(['upid', 'protein_count'])
-
-print(f"\nLength of input data: {len(df)}")
-print(f"\nLength of input data unique proteomes: {df['upid'].nunique()}")
-print(f"\nCount effective exclusions:\n {df['is_effective'].value_counts()}")
-print(f"\nUnique Count effective exclusions:\n {df_unique['is_effective'].value_counts()}")
-
-print(f"\nExcluding proteomes with protein count: {excluded_protein_counts}")
-df1 = df[~df['protein_count'].isin(excluded_protein_counts)]
-df1_unique = df_unique[~df_unique['protein_count'].isin(excluded_protein_counts)]
-
-print(f"\nLength of unique proteomes in filtered data: {df1['upid'].nunique()}")
-print(f"\nLength of df: {len(df1)}")
-print(f"\nNo of unique proteomes removed: {df['upid'].nunique() - df1['upid'].nunique()}")
-print(f"\nSanity check2 : No of unique proteomes removed: {len(df_unique) - len(df1_unique)}")
-a = df_unique['protein_count'].value_counts()
-a[0] #76 should match this
-
-print(f"\nExcluding proteomes with assembly level: {assembly_level_to_exclude}")
-df2 = df1[~df1['assembly_level'].isin(assembly_level_to_exclude)]
-df2_unique =  df1_unique[~df1_unique['assembly_level'].isin(assembly_level_to_exclude)]
-
-print(f"\nLength of df: {len(df2)}")
-print(f"\nNo of unique proteomes removed: {df1['upid'].nunique() - df2['upid'].nunique()}")
-print(f"\nSanity check2 : No of unique proteomes removed: {len(df1_unique) - len(df2_unique)}")
-a2 = df1_unique['assembly_level'].value_counts()
-a2['partial']
-
-
-#4 upids belongig to 10 records have partial
-#	upid
-#3944	UP000243639
-#4450	UP000243565
-#26283	UP000242121
-#26304	UP000464300
-
-print(f"\nCount of effective exclusions with 'protein_count > 0' and 'assembly level not partial':\n {df2['is_effective'].value_counts()}")
-
-# Step 1: Identify upids to remove
-grouped = df2.groupby('upid')['exclusion_id'].agg(set)
-#grouped = df2.groupby('upid')['exclusion_id'].agg(list)
-print(f"\nLength of unique proteomes in grouped: {len(grouped)}")
-
-#upids_to_remove = grouped[
-#    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))
-#].index
-
-#upids_to_filter = grouped[
-#    grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
-#].index
-#print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
-
-upids_to_remove = grouped[
-    grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
-print(f"\nLength of unique proteomes to remove with second criteria: {(upids_to_remove).nunique()}")
-print(f"\nLength of unique proteomes to remove: {(upids_to_remove).nunique()}")
-
-# Step 2: Filter DataFrame on ids_to_omit
-df_filtered = df2[~df2['upid'].isin(upids_to_remove)]  # Remove unwanted upids
-
-if len(ids_to_keep) > 0:
-    upids_to_filter = grouped[
-        grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))
-        ].index
-    print(f"\nLength of unique proteomes to filter: {upids_to_filter.nunique()}")
-    print("\nThis is for cases when the same upid has exclusion_ids BOTH in ids_to_keep + ids_to_omit")
+    # STEP 3: Gathering upids to remove (and filter if any)
+    print("\nSTEP 3")
+    print(f"|--Gathering upids to remove based on {exclusion_id_colname}: {ids_to_omit}")
     
-    # Step 2a: Filter DataFrame on ids_to_keep if it exists
-    df_filtered = df_filtered[
-        df_filtered['upid'].isin(upids_to_filter) & df_filtered['exclusion_id'].isin(ids_to_keep) | 
-        ~df_filtered['upid'].isin(upids_to_filter)
-    ]
-    print(f"\nLength of unique proteomes in df_filtered: {(df_filtered['upid']).nunique()}")
-else:
-    print(f"\nNo UPIDs to filter as the ids_to_keep is empty: {ids_to_keep}")
+    if len(ids_to_keep) > 0:
+        print(f"|--ids_to_keep provided : {ids_to_keep}, hence complex filtering will be applied")
+        upids_to_remove = grouped[
+            grouped.apply(lambda ids: any(i in ids_to_omit for i in ids) and not any(i in ids_to_keep for i in ids))].index
+        print(f"\nNo. of {grouping_colname} to remove: {upids_to_remove.nunique()}")
+        
+        upids_to_filter = grouped[
+            grouped.apply(lambda ids: any(i in ids_to_keep for i in ids) and any(i in ids_to_omit for i in ids))].index
+        print(f"\nNo. of {grouping_colname} to filter: {upids_to_filter.nunique()}")
 
-#########################################################
-# Step 3: Define aggregation functions for each column
-agg_funcs = {
-    #'exclusion_id': lambda x: set(x),  # Directly using set with lambda
-    'exclusion_id': lambda x: ', '.join(str(i) for i in x.unique()),  # Directly using set with lambda
-    'id_description': lambda x: ', '.join(str(i) for i in x.unique()),  # Handling unique concatenation
-    'is_effective': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
-    'source': lambda x: ', '.join(str(i) for i in x.unique()),  # As above
-    'protein_count' : lambda x: set()
-}
+        # Step 3a: Filter DataFrame on ids_to_omit
+        df_filtered = df2[~df2[grouping_colname].isin(upids_to_remove)]  # Remove unwanted upids
+        
+        # Step 3b: Filter DataFrame on ids_to_keep
+        df_filtered = df_filtered[
+            df_filtered[grouping_colname].isin(upids_to_filter) & df_filtered[exclusion_id_colname].isin(ids_to_keep) | 
+            ~df_filtered[grouping_colname].isin(upids_to_filter)
+        ]        
+        
+        print(f"|--Length of data after removing and filtering {grouping_colname}: {(len(df_filtered))}")
+        print(f"|--Length of unique proteomes in the data after removing and filtering {grouping_colname}: {df_filtered[grouping_colname].nunique()}")
+
+    else:
+        print(f"|--Just filtering data based on {exclusion_id_colname}: {ids_to_omit}")
+        upids_to_remove = grouped[
+            grouped.apply(lambda ids: any(i in ids_to_omit for i in ids))].index
+        print(f"|--No. of {grouping_colname} to remove: {upids_to_remove.nunique()}")
+
+        # Step 3a: Filter DataFrame on ids_to_omit
+        df_filtered = df2[~df2[grouping_colname].isin(upids_to_remove)]  # Remove unwanted upids
+        print(f"|--Length of data after removing such {grouping_colname}: {(len(df_filtered))}")
+        
+
+    # STEP 4: Applying groupby with custom aggregation functions
+    print("\nSTEP 4")
+    print(f"|--Applyinn groupby and aggregation of values for columns.\nTotal columns to process: {len(df_filtered.columns)}")
+    print(F"\n|--Grouping column: {grouping_colname}")
+    print(f"\n|---For {len(colnames_for_value_merging)} columns: Appplying custom aggregation type 'join' values separated by ','. \nThese are {colnames_for_value_merging}")
+    print(f"\n|---- For column name {protein_count_colname}: Appplying custom aggregation type 'set' and then checking whether it contains a single value")
+
+    # For all other columns, use 'first' as the aggregation function
+    #other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
+    other_cols = df_filtered.columns.difference([grouping_colname]).tolist()
+
+    other_colnames = df_filtered.columns.difference([grouping_colname, protein_count_colname] + colnames_for_value_merging)
+    print(f"\n|----For all other {len(other_colnames)} columns: Appplying aggrgation type 'first'. \nThese are {list(other_colnames)}")
+
+    # Default aggregation function for other columns: first
+    for col in other_cols:
+        #print (col)
+        if col not in agg_funcs:  # Ensure we don't overwrite custom columns
+            #print(col)
+            agg_funcs[col] = 'first'
+    
+    #df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
+    df_grouped = df_filtered.groupby([grouping_colname]).agg(agg_funcs).reset_index()
+    print(f"\nLength of unique proteomes in grouped and aggregated data: {(df_grouped[grouping_colname]).nunique()}")
+
+    # Sanity check
+    print("\nSTEP 5")
+    print(f"\Quick sanity check to see if there are any duplicate {grouping_colname}")
+    duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
+    if not duplicates.empty:
+        print("\nFAILURE: Duplicates found in grouped data.")
+        raise ValueError("Duplicate records found after grouping and aggregation.")
+    else:
+        print("\nSUCCESS: Data grouped and aggregated successfully.")
+        
+    if reorder_cols:
+        print("\nSTEP 5a")
+        print("|--Reordering columns...")
+        print(f"|--Placing {colnames_for_value_merging} at the end...")
+        df_grouped = move_cols_to_end(df_grouped, colnames_for_value_merging) 
+
+    print("\nQuick QC")
+    print(f"|--No of unique proteomes in final data: {df_grouped[grouping_colname].nunique()}")
+    print(f"|--No. of unique proteomes removed: {df[grouping_colname].nunique() - df_grouped[grouping_colname].nunique()}")
+    print(f"|--Stats for protein length in the proteomes:\n {df_grouped[protein_count_colname].describe()}")
+
+    return df_grouped
+###############################################################################
 
 
-# For all other columns, use 'first' as the aggregation function
-#other_cols = df_filtered.columns.difference(['upid', 'protein_count', 'exclusion_id']).tolist()
-other_cols = df_filtered.columns.difference(['upid', 'protein_count']).tolist()
-
-# Default aggregation function for other columns
-for col in other_cols:
-    #print (col)
-    if col not in agg_funcs:  # Ensure we don't overwrite custom columns
-        print(col)
-        agg_funcs[col] = 'first'
-#########################################################
-# Step 4: Apply groupby with custom aggregation functions
-#df_grouped = df_filtered.groupby(['upid', 'protein_count']).agg(agg_funcs).reset_index()
-df_grouped = df_filtered.groupby(['upid']).agg(agg_funcs).reset_index()
-
-print(f"\nLength of unique proteomes in final df: {(df_grouped['upid']).nunique()}")
-
-# Output result
-print(df_grouped)
-
-# To check for duplicates in `df_grouped`
-df_grouped['protein_count'].describe()
-df_grouped['upid'].duplicated().value_counts()
-
-df_filtered['upid'].nunique()
-df_grouped['upid'].nunique()
-
-# Check for any remaining duplicates after grouping
-duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
-duplicates = df_grouped[df_grouped.duplicated(subset=['upid', 'protein_count'], keep=False)]
-
-print(duplicates)
-
-df_grouped['is_effective'].value_counts()
-df_grouped['protein_count'].describe()
-
-print(f"\nNo of unique proteomes in final: {df_grouped['upid'].nunique()}")
-print(f"\nNo of unique proteomes removed: {df['upid'].nunique() - df_grouped['upid'].nunique()}")
-
-######
-
-cols_move_end = ['exclusion_id','id_description','is_effective','source']
-df_grouped_reordered = move_cols_to_end(df_grouped, cols_move_end)
 
 
-##########################################
-outfile_df = basedir + "/spneumo_biosample_info_processed1.out"
-df_grouped_reordered.to_csv(outfile_df, sep="\t", index=False )
-
-outfile_ids = basedir + "/proc-ids1.txt"
-df_grouped_reordered['upid'].to_csv(outfile_ids, index=False)
-
-#############################
-
-fcheck  = ['UP000074114', 'UP000299029']
-z = df_grouped_reordered[df_grouped_reordered['upid'].isin(fcheck)]
-z = df[df['upid'].isin(fcheck)]
