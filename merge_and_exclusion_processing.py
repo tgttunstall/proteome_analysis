@@ -19,8 +19,6 @@ basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 up_spneumo_proteomes = basedir + "/spneumo_biosample_info.out"
 exclusion_reasons = basedir + "/exclusion_reasons.tsv"
 checkm = pd.read_csv(basedir + "/CheckM_report_prokaryotes.txt", sep="\t")
-
-
 ################################################################################################################################################################################################################################################################################################################################
 a = merge_data(file1=up_spneumo_proteomes,
               file2=exclusion_reasons,
