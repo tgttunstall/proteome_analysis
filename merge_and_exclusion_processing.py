@@ -5,8 +5,7 @@ Created on Thu Mar  6 16:11:58 2025
 
 @author: tanu
 """
-# FIXME
-import from processing_functions merge_data, process_up_exclusions
+from processing_functions.py import merge_data, process_up_exclusions
 
 # TODO: add cmd args to call these files
 

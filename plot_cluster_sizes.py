@@ -7,7 +7,7 @@ import seaborn as sns
 import argparse
 
 #FIXME:
-from plot_functions.py import plot_clustersize
+from plot_functions.py import  plot_clustersize
 ###############################################################################
 # Read data
 homedir = os.path.expanduser("~")
