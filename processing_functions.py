@@ -78,6 +78,7 @@ def process_up_exclusions(df,
                            ids_to_omit=[], 
                            excluded_protein_counts=[0], 
                            assembly_level_to_exclude=['partial', 'full'],
+                           assembly_colname='assembly_level',
                            reorder_cols=True
                            ):
     
@@ -135,20 +136,21 @@ def process_up_exclusions(df,
     # STEP 0:
     print("\nSTEP 0")
     print(f"|--Excluding proteomes with protein count: {excluded_protein_counts}")
-    df1 = df[~df['protein_count'].isin(excluded_protein_counts)]
+    df1 = df[~df[protein_count_colname].isin(excluded_protein_counts)]
     print(f"|--Length of data after excluding such proteomes: {len(df1)}")
     print(f"|--Length of unique proteomes in data: {df1[grouping_colname].nunique()}")
-    print(f"|--No. of unique proteomes removed: {df[grouping_colname].nunique() - df1[grouping_colname].nunique()}")
+    print(f"|--No. of unique proteomes removed: {df[grouping_colname].nunique() - df1[grouping_colname].nunique()}")    
+    p_zero_count = df[df[protein_count_colname].isin(excluded_protein_counts)][grouping_colname].unique().tolist()
 
     # STEP 1: 
     print("\nSTEP 1")
     print(f"|--Excluding proteomes with assembly level: {assembly_level_to_exclude}")
-    df2 = df1[~df1['assembly_level'].isin(assembly_level_to_exclude)]
+    df2 = df1[~df1[assembly_colname].isin(assembly_level_to_exclude)]
     print(f"|--Length of data after excluding such proteomes: {len(df2)}")
-    print(f"|--Length of unique proteomes in data: {df2['upid'].nunique()}")
+    print(f"|--Length of unique proteomes in data: {df2[grouping_colname].nunique()}")
     print(f"|--No. of unique proteomes removed: {df1[grouping_colname].nunique() - df2[grouping_colname].nunique()}")
-    
-    
+    p_partial_count = df1[df1[assembly_colname].isin(assembly_level_to_exclude)][grouping_colname].unique().tolist()
+
     # STEP 2: Grouping by 
     print("\nSTEP 2")
     print(f"|--Grouping data by: {grouping_colname}")
@@ -156,7 +158,6 @@ def process_up_exclusions(df,
     #grouped = df2.groupby('upid')['exclusion_id'].agg(set) #or  list 
     grouped = df2.groupby(grouping_colname)[exclusion_id_colname].agg(set)
     print(f"|--Length of unique proteomes in grouped data: {len(grouped)}")
-
 
     # STEP 3: Gathering upids to remove (and filter if any)
     print("\nSTEP 3")
@@ -194,6 +195,9 @@ def process_up_exclusions(df,
         df_filtered = df2[~df2[grouping_colname].isin(upids_to_remove)]  # Remove unwanted upids
         print(f"|--Length of data after removing such {grouping_colname}: {(len(df_filtered))}")
         
+
+    f=list(upids_to_remove)
+    df_excluded = df[df[grouping_colname].isin(f+p_zero_count+p_partial_count)]  # Remove unwanted upids
 
     # STEP 4: Applying groupby with custom aggregation functions
     print("\nSTEP 4")
@@ -241,7 +245,9 @@ def process_up_exclusions(df,
     print(f"|--No. of unique proteomes removed: {df[grouping_colname].nunique() - df_grouped[grouping_colname].nunique()}")
     print(f"|--Stats for protein length in the proteomes:\n {df_grouped[protein_count_colname].describe()}")
 
-    return df_grouped
+    #return df_grouped
+    return df_grouped, df_excluded
+
 ###############################################################################
 
 

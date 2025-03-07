@@ -44,7 +44,18 @@ a2[['refseq-accession','checkm-completeness', 'checkm-contamination']].count()
 
 ###############################################################################
 #ids_to_keep = [29, 94, 96, 99]
-processed_df = process_up_exclusions(df=a2,
+# processed_df = process_up_exclusions(df=a2,
+#                       exclusion_id_colname='exclusion_id',
+#                       grouping_colname = 'upid',
+#                       protein_count_colname = 'protein_count',
+#                       colnames_for_value_merging=['exclusion_id', 'id_description', 'is_effective', 'source'],
+#                       ids_to_keep=[], 
+#                       ids_to_omit=[1, 7, 9, 14, 2], 
+#                       excluded_protein_counts=[0], 
+#                       assembly_level_to_exclude=['partial'],
+#                       reorder_cols=True)
+
+processed_df, excluded_df = process_up_exclusions(df=a2,
                       exclusion_id_colname='exclusion_id',
                       grouping_colname = 'upid',
                       protein_count_colname = 'protein_count',
@@ -63,4 +74,11 @@ processed_df.to_csv(outfile_df, sep="\t", index=False )
 outfile_ids = basedir + "/proc-ids.txt"
 print(f"\nWriting ID file: {outfile_ids}")
 processed_df['upid'].to_csv(outfile_ids, index=False)
+
+n_excluded = excluded_df['upid'].nunique()
+excluded_upids = basedir + "/excluded_proteomes_"+str(n_excluded)+".txt"
+print(f"\nWriting Excluded UP proteomes: {excluded_upids}")
+print(f"\nData dimensions {excluded_df.shape}")
+print(f"\nNo. of unique proteomes in excluded file: {excluded_df['upid'].nunique()}")
+excluded_df.to_csv(excluded_upids, index=False)
 ###############################################################################
