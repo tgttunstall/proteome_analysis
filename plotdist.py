@@ -27,7 +27,7 @@ sns.kdeplot(data=df_atb2['protein_count'], color='darkorange', label='ATB Proteo
 plt.xlabel('Number of Proteins', fontsize=14)
 plt.ylabel('Density', fontsize=14)
 plt.title('Proteome Distribution Across Categories', fontsize=16)
-plt.legend(title='Categories', fontsize=12)
+plt.legend(title='', fontsize=12)
 plt.show()
 
 ####
@@ -39,7 +39,7 @@ import numpy as np
 
 # Bins and aesthetic configurations
 bins = np.arange(df_up2['protein_count'].min(), df_up2['protein_count'].max() + 100, 100)
-title_fontsize = 16
+title_fontsize = 14
 label_fontsize = 14
 tick_fontsize = 12
 legend_fontsize = 14
@@ -148,12 +148,12 @@ plt.show()
 ##########
 # GI
 #########
-import plotly.graph_objects as go
-from cmplot import cmplot
+#import plotly.graph_objects as go
+#from cmplot import cmplot
 
-tips = sns.load_dataset("tips")
-iris = sns.load_dataset("iris")
+#tips = sns.load_dataset("tips")
+#iris = sns.load_dataset("iris")
 
-cmplot(tips,xcol='total_bill')
-fig = go.Figure(*cmplot(iris,xcol="species")) #using splat operator
-fig.show()
+#cmplot(tips,xcol='total_bill')
+#fig = go.Figure(*cmplot(iris,xcol="species")) #using splat operator
+#fig.show()

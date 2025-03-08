@@ -170,3 +170,96 @@ def plot_clustersize(df,
 #          x_proteomes='number', # percent
 #          output_plot='out.png',
 #          show_stats=True)
+###############################################################################
+def plot_category_counts(df,
+                         category_col="Categories", 
+                         total_col="Total", 
+                         total_col_label = "Total",
+                         exclusive_col="Exclusive",
+                         exclusive_col_label = "Exclusive",
+                         cat_colours = {"UP": "blue",
+                                   "ATB": "darkorange",
+                                   "UP+ATB": "purple"},
+                         bar_annot_size = 12,
+                         xlabel = "",
+                         ylabel = "Count",
+                         label_size = 14,
+                         plot_title="Distribution of Total and Exclusive Counts",
+                         plot_label_size=16,
+                         legend_font_size=12,
+                         output_plot=False  # Specify a file to save, or set to None to display
+                        ):
+    """
+    Generates a barplot of cluster sizes from a precomputed counts file.
+
+    Args:
+        df: DataFrame containing the data.
+        
+    """
+    colors = cat_colours
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Plot total counts
+    bars_total = ax.bar(df[category_col], df[total_col], color=[colors[cat] for cat in df[category_col]], label=total_col_label)
+
+    # Plot exclusive counts with hatching
+    bars_exclusive = ax.bar(df[category_col], df[exclusive_col], color=[colors[cat] for cat in df[category_col]],
+                            hatch="///", edgecolor="black", alpha=1, label=exclusive_col_label)
+
+    # Annotate values on the bars
+    for bar, value in zip(bars_total, df[total_col]):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1000, f"{value:,}", 
+                ha="center", fontsize=bar_annot_size, color="black")
+
+    for bar, value in zip(bars_exclusive, df[exclusive_col]):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() - 10000, f"{value:,}", 
+                ha="center", fontsize=bar_annot_size, color="white", fontweight="bold")
+
+    # Set labels and title
+    ax.set_xlabel(xlabel, fontsize=label_size)
+    ax.set_ylabel(ylabel, fontsize=label_size)
+    ax.set_title(plot_title, fontsize=plot_label_size)
+
+    # Custom legend to indicate Total and Exclusive
+    legend_elements = [
+        plt.Rectangle((0, 0), 1, 1, facecolor="grey", edgecolor="black", label=total_col_label),
+        plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor="black", hatch="///", label=exclusive_col_label)
+    ]
+    ax.legend(handles=legend_elements, fontsize=legend_font_size)
+    # Save or show plot
+    if output_plot:
+        plt.savefig(output_plot)
+        print(f"\nCluster size distribution plot saved to: {output_plot}")
+    else:
+        plt.show()
+    
+# Example usage:
+aC = 26000
+bC = 50000
+cC = aC+bC
+eg_data = {'Categories': ['C1', 'C2', 'C3'],
+        'Total': [aC, bC, cC],
+        'Exclusive': [1000, 5000, 8000]}
+
+# Create DataFrame
+bar_df = pd.DataFrame(eg_data)
+
+print(bar_df)
+plot_category_counts(df = bar_df,
+                     category_col="Categories", 
+                     total_col="Total", 
+                     total_col_label = "Total",
+                     exclusive_col="Exclusive",
+                     exclusive_col_label = "Exclusive",
+                     cat_colours = {"C1": "blue",
+                                   "C2": "darkorange",
+                                   "C3": "purple"},
+                     bar_annot_size = 12,
+                     xlabel = "",
+                     ylabel = "Count",
+                     label_size = 14,
+                     plot_title="Example",
+                     plot_label_size=16,
+                     legend_font_size=12,
+                     output_plot=False)
