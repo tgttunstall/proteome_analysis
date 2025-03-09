@@ -64,6 +64,7 @@ def plot_clustersize(df,
 
     print(f"\nNo. of bins with method {hist_bin_method}: {len(nbins)}")
 
+    
     num_bins = len(nbins) - 1
     bin_size = round(nbins[1] - nbins[0], 2) if num_bins > 1 else "Variable"
 
@@ -77,7 +78,6 @@ def plot_clustersize(df,
           f"{f' (Clusters with >{min_proteomes} Proteomes)' if min_proteomes is not None else ''}\n"
           f"Number of Bins: {num_bins}, Bin Size: {bin_size}")
 
-    
     plt.xlabel(f"{xlabel} {'(%)' if x_proteomes == 'percent' else ''}") 
     
     if ylog:
@@ -235,31 +235,133 @@ def plot_category_counts(df,
         plt.show()
     
 # Example usage:
-aC = 26000
-bC = 50000
-cC = aC+bC
-eg_data = {'Categories': ['C1', 'C2', 'C3'],
-        'Total': [aC, bC, cC],
-        'Exclusive': [1000, 5000, 8000]}
+#aC = 26000
+#bC = 50000
+#cC = aC+bC
+#eg_data = {'Categories': ['C1', 'C2', 'C3'],
+#        'Total': [aC, bC, cC],
+#        'Exclusive': [1000, 5000, 8000]}
 
 # Create DataFrame
-bar_df = pd.DataFrame(eg_data)
+#bar_df = pd.DataFrame(eg_data)
 
-print(bar_df)
-plot_category_counts(df = bar_df,
-                     category_col="Categories", 
-                     total_col="Total", 
-                     total_col_label = "Total",
-                     exclusive_col="Exclusive",
-                     exclusive_col_label = "Exclusive",
-                     cat_colours = {"C1": "blue",
-                                   "C2": "darkorange",
-                                   "C3": "purple"},
-                     bar_annot_size = 12,
-                     xlabel = "",
-                     ylabel = "Count",
-                     label_size = 14,
-                     plot_title="Example",
-                     plot_label_size=16,
-                     legend_font_size=12,
-                     output_plot=False)
+# print(bar_df)
+# plot_category_counts(df = bar_df,
+#                      category_col="Categories", 
+#                      total_col="Total", 
+#                      total_col_label = "Total",
+#                      exclusive_col="Exclusive",
+#                      exclusive_col_label = "Exclusive",
+#                      cat_colours = {"C1": "blue",
+#                                    "C2": "darkorange",
+#                                    "C3": "purple"},
+#                      bar_annot_size = 12,
+#                      xlabel = "",
+#                      ylabel = "Count",
+#                      label_size = 14,
+#                      plot_title="Example",
+#                      plot_label_size=16,
+#                      legend_font_size=12,
+#                      output_plot=False)
+
+###############################################################################
+def plot_histogram(data,
+                   x,
+                   #kde=True,
+                   #nbins=None,
+                   bin_method='rice',
+                   color='grey',
+                   label='T', 
+                   alpha=0.7,
+                   ylog=True,
+                   xlabel='x',
+                   ylabel='Count',
+                   output_plot=None):
+    
+    """
+    Generates a histogram using Seaborn.
+
+    Parameters
+    ----------
+    data : DataFrame
+        Input dataset.
+    x : str
+        Column name for the x-axis.
+    kde : bool, optional
+        Whether to show kernel density estimate (default is True).
+    nbins : int, optional
+        Number of bins for histogram (if provided, overrides bin_method).
+    bin_method : str, optional
+        Method for calculating bins if nbins is not provided (default is 'rice').
+    color : str, optional
+        Color of the histogram bars (default is 'grey').
+    label : str, optional
+        Label for legend (default is 'T').
+    alpha : float, optional
+        Transparency level for bars (default is 0.5).
+    ylog : bool, optional
+        Whether to use logarithmic scale on the y-axis (default is True).
+    xlabel : str, optional
+        X-axis label (default is 'x').
+    ylabel : str, optional
+        Y-axis label (default is 'Count').
+    output_plot : str, optional
+        If provided, saves the plot to this filename.
+
+    Returns
+    -------
+    None
+    """
+
+    # Handle bin calculation
+    # if nbins is not None:
+    #     print(f"\nUsing specified number of bins: {nbins}. Ignoring bin_method '{bin_method}'.")
+
+    #     # Calculate bin edges and bin width dynamically
+    #     data_min, data_max = data[x].min(), data[x].max()
+    #     bins = np.linspace(data_min, data_max, nbins + 1)  # Evenly spaced bins
+    #     bin_size = round((data_max - data_min) / nbins, 2) if nbins > 1 else "Variable"
+
+    # else:
+    #     bins = np.histogram_bin_edges(data[x], bins=bin_method)
+    #     print(f"\nCalculating bin edges using method: '{bin_method}'.")
+
+    #     num_bins = len(bins) - 1
+    #     bin_size = round(bins[1] - bins[0], 2) if num_bins > 1 else "Variable"
+        
+        
+    bins = np.histogram_bin_edges(data[x], bins=bin_method)
+    print(f"\nCalculating bin edges using method: '{bin_method}'.")
+    num_bins = len(bins) - 1
+    bin_size = round(bins[1] - bins[0], 2) if num_bins > 1 else "Variable"
+
+    # Create histogram plot
+    plt.figure(figsize=(10, 6))
+    ax = sns.histplot(
+        data=data,
+        x=x,
+        bins=num_bins,
+        color=color,
+        label=label,
+        #kde=kde,
+        alpha=alpha
+    )
+
+    # Set plot titles and labels
+    plt.title(f"Distribution of {xlabel}\nNumber of Bins: {len(bins)-1}, Bin Size: {bin_size}")
+    plt.xlabel(xlabel)
+    
+    if ylog:
+        plt.ylabel(f'{ylabel} (Log)')
+        plt.yscale('log')
+    else:
+        plt.ylabel(ylabel)
+    
+    plt.tight_layout()
+
+    # Save or show the plot
+    if output_plot:
+        plt.savefig(output_plot)
+        print(f"\nPlot of Distribution of {xlabel} saved to: {output_plot}")
+    else:
+        plt.show()

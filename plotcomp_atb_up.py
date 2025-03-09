@@ -80,7 +80,6 @@ plot_category_counts(df = count_biosamples_df,
                          legend_font_size=12,
                          output_plot=outplot_biosamples)
                         
-
 #--------
 # Barplot: Proteomes
 #--------
@@ -104,35 +103,10 @@ plot_category_counts(df = count_proteomes_df,
                          output_plot=outplot_proteomes)
 
 ###############################################################################
-a = df_up2[['upid', 'biosample', 'is_excluded', 'is_effective','exclusion_id']]
-not_true_exclusions = [96,99]
-a.loc[a['exclusion_id'].str.contains(r'96|99'), :].shape[0]
-a2 = a.loc[a['exclusion_id'].str.contains(r'96|99'), :]
-
-
-nbins = np.histogram_bin_edges(cluster_sizes, bins=hist_bin_method)
-
-# Combining 'Representative' and 'Reference' data into one Series
-combined_data_busco = pd.concat([
-    df_up2[df_up2['is_representative'] == 't']['complete_combined_score'], 
-    df_up2[df_up2['is_reference'] == 't']['complete_combined_score']
-])
-
-red_df = df_up2[df_up2['is_redundant'].isin([1, -1])]
-ex_df = df_up2[df_up2['is_excluded'] == 't']
-
-
-df_up2[df_up2['is_excluded'] == 't']
-df_up2[df_up2['is_redundant'].isin([1, -1])]
-
-ax=sns.histplot(
-    data=ex_df,
-    x='checkm-completeness', 
-    bins=50, 
-    color='grey',
-    label='', 
-    alpha=excluded_alpha)
+ax=sns.histplot(data=df_up2, 
+             x='protein_count', 
+             bins=bins, 
+             color='blue', 
+             label='General UP Proteomes',
+             alpha=general_alpha)
 plt.yscale('log')
-
-df_up2[df_up2['is_redundant'].isin([1, -1])]['complete_combined_score'].describe()
-
