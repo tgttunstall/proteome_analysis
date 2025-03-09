@@ -265,6 +265,12 @@ def plot_category_counts(df,
 #                      output_plot=False)
 
 ###############################################################################
+#!/usr/bin env python
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+#########
 def plot_histogram(data,
                    x,
                    #kde=True,
@@ -276,10 +282,10 @@ def plot_histogram(data,
                    ylog=True,
                    xlabel='x',
                    ylabel='Count',
+                   extra_title_label='',
                    output_plot=None):
-    
     """
-    Generates a histogram using Seaborn.
+    Generates a histogram using Seaborn, with automatic bin calculation and NaN handling.
 
     Parameters
     ----------
@@ -287,24 +293,22 @@ def plot_histogram(data,
         Input dataset.
     x : str
         Column name for the x-axis.
-    kde : bool, optional
-        Whether to show kernel density estimate (default is True).
-    nbins : int, optional
-        Number of bins for histogram (if provided, overrides bin_method).
     bin_method : str, optional
-        Method for calculating bins if nbins is not provided (default is 'rice').
+        Method for calculating bins (default is 'rice').
     color : str, optional
         Color of the histogram bars (default is 'grey').
     label : str, optional
         Label for legend (default is 'T').
     alpha : float, optional
-        Transparency level for bars (default is 0.5).
+        Transparency level for bars (default is 0.7).
     ylog : bool, optional
         Whether to use logarithmic scale on the y-axis (default is True).
     xlabel : str, optional
         X-axis label (default is 'x').
     ylabel : str, optional
         Y-axis label (default is 'Count').
+    extra_title_label : str, optional
+        Extra text to add to the plot title (default is empty).
     output_plot : str, optional
         If provided, saves the plot to this filename.
 
@@ -329,9 +333,20 @@ def plot_histogram(data,
     #     num_bins = len(bins) - 1
     #     bin_size = round(bins[1] - bins[0], 2) if num_bins > 1 else "Variable"
         
-        
+
+    # Handle missing values (omit NaNs in column `x`)
+    initial_count = len(data)
+    data = data.dropna(subset=[x])
+    final_count = len(data)
+    removed_nans = initial_count - final_count
+
+    if removed_nans > 0:
+        print(f"⚠️ Alert: Removed {removed_nans} NaN values from '{x}' column.")
+
+    # Calculate bin edges
     bins = np.histogram_bin_edges(data[x], bins=bin_method)
     print(f"\nCalculating bin edges using method: '{bin_method}'.")
+    
     num_bins = len(bins) - 1
     bin_size = round(bins[1] - bins[0], 2) if num_bins > 1 else "Variable"
 
@@ -343,12 +358,11 @@ def plot_histogram(data,
         bins=num_bins,
         color=color,
         label=label,
-        #kde=kde,
         alpha=alpha
     )
 
     # Set plot titles and labels
-    plt.title(f"Distribution of {xlabel}\nNumber of Bins: {len(bins)-1}, Bin Size: {bin_size}")
+    plt.title(f"Distribution of {xlabel}\n{extra_title_label} (n={final_count:,}) | Bins: {num_bins}, Bin Size: {bin_size}")
     plt.xlabel(xlabel)
     
     if ylog:
