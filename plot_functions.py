@@ -17,7 +17,7 @@ def plot_clustersize(df,
               xlabel='Unique Proteomes',
               ylabel='Number of Clusters',
               x_proteomes='number', 
-              output_plot='outplot.png', 
+              output_plot=None, 
               show_stats=True):
     """
     Generates a histogram of cluster sizes from a precomputed counts file.
@@ -187,8 +187,7 @@ def plot_category_counts(df,
                          plot_title="Distribution of Total and Exclusive Counts",
                          plot_label_size=16,
                          legend_font_size=12,
-                         output_plot=False  # Specify a file to save, or set to None to display
-                        ):
+                         output_plot=None):
     """
     Generates a barplot of cluster sizes from a precomputed counts file.
 
@@ -379,3 +378,263 @@ def plot_histogram(data,
         print(f"\nPlot of Distribution of {xlabel} saved to: {output_plot}")
     else:
         plt.show()
+###############################################################################
+def plot_protein_busco(df, 
+                       spacing_factor=1, 
+                       bar_width= 0.15,
+                       gap= 0.18,
+                       title_fontsize=14, 
+                       label_fontsize=14, 
+                       tick_fontsize=12, 
+                       legend_fontsize=14, 
+                       fig_height = 10,
+                       plot_title="Protein count and BUSCO: Duplicate samples",
+                       output_plot=None):
+    """
+     Create a bar plot comparing protein counts and BUSCO scores for duplicate biosamples.
+    
+     Parameters:
+     -----------
+     df : pandas.DataFrame
+         Input DataFrame containing biosample data with columns:
+         'biosample', 'protein_count1', 'protein_count2', 'complete_combined_score1', 
+         'complete_combined_score2', 'is_excluded1', 'is_excluded2', 'is_effective1', 'is_effective2'.
+    
+     spacing_factor : float, optional (default=1)
+         Factor to adjust spacing between biosample groups on the x-axis.
+    
+     bar_width : float, optional (default=0.15)
+         Width of each bar in the plot.
+    
+     gap : float, optional (default=0.18)
+         Gap between bars within each biosample group.
+    
+     title_fontsize : int, optional (default=14)
+         Font size for the plot title.
+    
+     label_fontsize : int, optional (default=14)
+         Font size for axis labels.
+    
+     tick_fontsize : int, optional (default=12)
+         Font size for tick labels.
+    
+     legend_fontsize : int, optional (default=14)
+         Font size for legend (if used).
+    
+     fig_height : int, optional (default=10)
+         Height of the figure in inches.
+    
+     plot_title : str, optional (default="Protein Count and BUSCO score for duplicate Biosamples")
+         Title of the plot.
+    
+     Returns:
+     --------
+     fig : matplotlib.figure.Figure
+         The created figure object.
+    
+     ax1 : matplotlib.axes.Axes
+         The primary y-axis for protein counts.
+    
+     ax2 : matplotlib.axes.Axes
+         The secondary y-axis for BUSCO scores.
+    
+     Notes:
+     ------
+     - The function creates a grouped bar plot with protein counts on the left y-axis and BUSCO scores on the right y-axis.
+     - Bars are colored based on 'is_excluded' and 'is_effective' values:
+       - Green: 'is_excluded' is 'f' and 'is_effective' is 'False'
+       - Red: 'is_excluded' is 't' and 'is_effective' is 'True'
+       - Gold: Otherwise
+     - Bars for the second set of data (columns ending with '2') are hatched for differentiation.
+     - Text labels are added above each bar showing the exact values.
+     - X-axis labels (biosamples) are rotated 45 degrees for better readability.
+    
+     Example:
+     --------
+     df : pandas.DataFrame
+    Input DataFrame containing biosample data with the following columns:
+    - 'biosample': Unique identifier for each biosample.
+    - 'upid1', 'upid2': IDs for duplicate samples.
+    - 'protein_count1', 'protein_count2': Protein counts for each duplicate biosample.
+    - 'complete_combined_score1', 'complete_combined_score2': BUSCO scores for each duplicate biosample.
+    - 'is_excluded1', 'is_excluded2': Flags indicating exclusion status ('t' or 'f').
+    - 'is_effective1', 'is_effective2': Flags indicating effectiveness ('True' or 'False').
+
+    Example Data Format:
+    --------------------
+    data = {
+        "biosample": ["SAMEA1024557", "SAMEA1024588"],
+        "upid1": ["UP000047540", "UP000235499"],
+        "upid2": ["UP000235454", "UP000046519"],
+        "protein_count1": [2010, 2028],
+        "protein_count2": [1982, 2012],
+        "complete_combined_score1": [99.8, 99.8],
+        "complete_combined_score2": [99.8, 99.3],
+        "is_excluded1": ["t", "f"],
+        "is_excluded2": ["f", "f"],
+        "is_effective1": ["True", "False"],
+        "is_effective2": ["False", "False"],
+    }
+
+     >>> fig, ax1, ax2 = plot_protein_busco(df, spacing_factor=1.2, bar_width=0.2, gap=0.2, title_fontsize=16)
+     >>> plt.show()
+     """
+
+    # Calculate figure size based on number of samples
+    fig_width = max(18, len(df) * 2)  # Minimum width of 18, scales with data
+    fig_height = fig_height
+
+    # Define positions and bar width
+    x = np.arange(len(df)) * spacing_factor  # Adjust spacing between biosamples
+    bar_width = bar_width
+    gap = gap  # Slight gap between '1' and '2' groups
+
+# FIXME: do this outside
+# FIXME: as the range param interefers with the plot if indices are not from 0..9:
+    # Function to determine bar color based on conditions
+    def get_bar_color(is_excluded, is_effective):
+        if is_excluded == "f" and is_effective == 'False':
+            return "green"
+        elif is_excluded == "t" and is_effective == 'True':
+            return "red"
+        else:
+            return "gold"
+
+    # Create the figure and axis objects
+    fig, ax1 = plt.subplots(figsize=(fig_width, fig_height))
+    ax2 = ax1.twinx()
+
+    # Plot protein_count1 and complete_combined_score1 for each biosample (left group)
+    ax1.bar(
+        x - bar_width - gap / 2,
+        df["protein_count1"],
+        bar_width,
+        edgecolor='blue',
+        label="Protein Count 1",
+        color=[get_bar_color(df["is_excluded1"][i], df["is_effective1"][i]) for i in range(len(df))],
+    )
+    ax2.bar(
+        x - gap / 2,
+        df["complete_combined_score1"],
+        bar_width,
+        edgecolor='black',
+        label="BUSCO Score 1",
+        color=[get_bar_color(df["is_excluded1"][i], df["is_effective1"][i]) for i in range(len(df))],
+    )
+
+    # Plot protein_count2 and complete_combined_score2 for each biosample (right group)
+    ax1.bar(
+        x + gap / 2,
+        df["protein_count2"],
+        bar_width,
+        label="Protein Count 2",
+        edgecolor='blue',
+        color=[get_bar_color(df["is_excluded2"][i], df["is_effective2"][i]) for i in range(len(df))],
+        hatch="//",  # Add hatches to differentiate columns ending in '2'
+    )
+    ax2.bar(
+        x + bar_width + gap / 2,
+        df["complete_combined_score2"],
+        bar_width,
+        label="BUSCO Score 2",
+        edgecolor='black',
+        color=[get_bar_color(df["is_excluded2"][i], df["is_effective2"][i]) for i in range(len(df))],
+        hatch="//",  # Add hatches to differentiate columns ending in '2'
+    )
+
+    # Set labels for the axes with custom font sizes
+    ax1.set_ylabel("Protein Count", color="blue", fontsize=label_fontsize)
+    ax2.set_ylabel("BUSCO Score", color="black", fontsize=label_fontsize)
+
+    # Customize tick parameters with font size
+    ax1.tick_params(axis="y", labelcolor="blue", labelsize=tick_fontsize)
+    ax2.tick_params(axis="y", labelcolor="black", labelsize=tick_fontsize)
+    ax1.tick_params(axis="x", labelsize=tick_fontsize)
+
+    # Add text labels above bars for protein counts and BUSCO scores
+    for i in range(len(df)):
+        # Protein Count 1 (vertical display)
+        ax1.text(
+            x[i] - bar_width - gap / 2,
+            df["protein_count1"][i] + 10,
+            str(df["protein_count1"][i]),
+            ha="center",
+            va="bottom",
+            color="blue",
+            rotation=90,  # Vertical text
+            fontsize=tick_fontsize,
+        )
+        
+        # BUSCO Score 1
+        ax2.text(
+            x[i] - gap / 2,
+            df["complete_combined_score1"][i] + 0.5,
+            str(df["complete_combined_score1"][i]),
+            ha="center",
+            va="bottom",
+            color="black",
+            fontsize=tick_fontsize,
+        )
+        
+        # Protein Count 2 (vertical display)
+        ax1.text(
+            x[i] + gap / 2,
+            df["protein_count2"][i] + 10,
+            str(df["protein_count2"][i]),
+            ha="center",
+            va="bottom",
+            color="blue",
+            rotation=90,  # Vertical text
+            fontsize=tick_fontsize,
+        )
+        
+        # BUSCO Score 2
+        ax2.text(
+            x[i] + bar_width + gap / 2,
+            df["complete_combined_score2"][i] + 0.5,
+            str(df["complete_combined_score2"][i]),
+            ha="center",
+            va="bottom",
+            color="black",
+            fontsize=tick_fontsize,
+        )
+
+    # Set x-axis labels with rotation and font size
+    plt.xticks(x, df["biosample"], rotation=45, ha="right", fontsize=tick_fontsize)
+
+    # Set plot title with custom font size
+    plt.title(plot_title, fontsize=title_fontsize)
+
+    # Adjust layout to fit rotated labels
+    plt.tight_layout()
+    
+    # Save or show the plot
+    if output_plot:
+        plt.savefig(output_plot, bbox_inches="tight")
+        print(f"\nPlot saved to: {output_plot}")
+    else:
+        plt.show()
+
+    return fig, ax1, ax2
+
+# Usage example:
+# data = {
+#     "biosample": ["SAMEA1024557", "SAMEA1024588"],
+#     "upid1": ["UP000047540", "UP000235499"],
+#     "upid2": ["UP000235454", "UP000046519"],
+#     "protein_count1": [2010, 2028],
+#     "protein_count2": [1982, 2012],
+#     "complete_combined_score1": [99.8, 99.8],
+#     "complete_combined_score2": [99.8, 99.3],
+#     "is_excluded1": ["t", "f"],
+#     "is_excluded2": ["f", "f"],
+#     "is_effective1": ["True", "False"],
+#     "is_effective2": ["False", "False"],
+# }
+
+# # Create DataFrame
+# df = pd.DataFrame(data)
+# # fig, ax1, ax2 = plot_protein_busco(df)
+# # plt.show()
+# fig, ax1, ax2 = plot_protein_busco(df, output_plot="protein_busco_plot.png")
+

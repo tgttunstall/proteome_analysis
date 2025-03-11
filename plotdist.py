@@ -163,13 +163,18 @@ plot_histogram(data=excluded_df,
 
 
 ###############################################################################
-upids_cat= list(excluded_df['upid']) + list(redundant_df['upid'])
-other_up = df_up2[~df_up2['upid'].isin(upids_cat)]
+ref_rep_df = df_up2[ (df_up2['is_reference'] == 't') | (df_up2['is_representative'] == 't')]
+
+upids_cat= list(excluded_df['upid']) + list(redundant_df['upid'] + list(ref_rep_df['upid'])
+upids_catUL = list(set(upids_cat))
+print(f"\nNo. of unique UPIDS that are categorised as Reference, Representative or Excluded:", {len(upids_catUL)})
+
+other_up = df_up2[~df_up2['upid'].isin(upids_catUL)]
 other_up.head()
 other_up.shape
 
-other_up2 = df_up2[~(df_up2['is_excluded'] == 't') & df_up2['is_redundant'].isin([-1, 1])]
-
+print(f"\nNo. of unique UPIDs that are 'OTHER'")
+print(f"i.e. NOT categorised as either Reference, Representative or Excluded: {other_up['upid'].nunique()}")
 
 plot_histogram(data=other_up,
                    x='protein_count',
@@ -185,6 +190,7 @@ plot_histogram(data=other_up,
                    extra_title_label='Other UP Proteomes',
                    output_plot=basedir+"/Plots/HistOtherlUP_proteins.png")
 
+other_up['protein_count'].value_counts()
 
 plot_histogram(data=other_up,
                    x='complete_combined_score',
