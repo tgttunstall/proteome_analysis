@@ -1,5 +1,7 @@
 #!/usr/bin env python
 
+import sys, os
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -8,8 +10,8 @@ import numpy as np
 from plot_functions.py import  plot_histogram()
 ############
 homedir = os.path.expanduser("~")
-#basedir =  homedir + "/Documents/arise/spneumo_dataset"
-basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
+basedir =  homedir + "/Documents/arise/spneumo_dataset"
+#basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
 
 ############
