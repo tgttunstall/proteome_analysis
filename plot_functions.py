@@ -18,7 +18,8 @@ def plot_clustersize(df,
               ylabel='Number of Clusters',
               x_proteomes='number', 
               output_plot=None, 
-              show_stats=True):
+              show_stats=True,
+              fig_size=(10, 6)):
     """
     Generates a histogram of cluster sizes from a precomputed counts file.
 
@@ -282,6 +283,9 @@ def plot_histogram(data,
                    xlabel='x',
                    ylabel='Count',
                    extra_title_label='',
+                   xlim=8800,
+                   #ylim=10**4,
+                   fig_size=(10,6),
                    output_plot=None):
     """
     Generates a histogram using Seaborn, with automatic bin calculation and NaN handling.
@@ -350,7 +354,9 @@ def plot_histogram(data,
     bin_size = round(bins[1] - bins[0], 2) if num_bins > 1 else "Variable"
 
     # Create histogram plot
-    plt.figure(figsize=(10, 6))
+    #plt.figure(figsize=(10, 6))
+    plt.figure(figsize=fig_size)
+
     ax = sns.histplot(
         data=data,
         x=x,
@@ -359,7 +365,26 @@ def plot_histogram(data,
         label=label,
         alpha=alpha
     )
+    
+    offset=100
+    plt.xlim(0-offset, (max(data[x]) + offset))
+    #plt.ylim(0, (max(data[x]) + 100))
 
+    # ADDING HERE:
+    #sns.histplot(data=data[data['is_reference'] == 't'], x='protein_count', 
+    #             #bins=num_bins, 
+    #             color='magenta',
+    #             label='Reference', 
+    #             alpha=0.8, 
+    #             hatch="--",
+    #             ax=ax)
+    #sns.histplot(data=data[data['is_representative'] == 't'], x='protein_count', 
+    #             #bins=num_bins, 
+    #             color='cyan',
+    #             label='Representative', 
+    #             alpha=0.8, 
+    #             hatch="////",
+    #             ax=ax)
     # Set plot titles and labels
     plt.title(f"Distribution of {xlabel}\n{extra_title_label} (n={final_count:,}) | Bins: {num_bins}, Bin Size: {bin_size}")
     plt.xlabel(xlabel)

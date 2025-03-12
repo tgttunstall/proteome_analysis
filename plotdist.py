@@ -13,8 +13,30 @@ homedir = os.path.expanduser("~")
 basedir =  homedir + "/Documents/arise/spneumo_dataset"
 #basedir =  "/home/pub/Work/data_arise_proteome/spneumo_dataset"
 
-
 ############
+# RAW source data
+# Hist: All UP Proteomes
+############
+plot_histogram(data=df_up_all,
+                   x='protein_count',
+                   #kde=True,
+                   #nbins=None,
+                   bin_method='rice',
+                   color='blue',
+                   label='T', 
+                   alpha=0.9,
+                   ylog=True,
+                   xlabel='Number of Proteins',
+                   ylabel='Proteome Frequency',
+                   extra_title_label='All UP Proteomes',
+                   xlim=8800,
+                   #ylim=10**4,
+                   fig_size=(10,6),
+                   output_plot=basedir+"/Plots/HistAll_raw.png"
+                   )
+##############################################################################
+############
+# Filtered data
 # Hist: All UP Proteomes
 ############
 plot_histogram(data=df_up2,
@@ -27,10 +49,13 @@ plot_histogram(data=df_up2,
                    alpha=0.9,
                    ylog=True,
                    xlabel='Number of Proteins',
-                   ylabel='Frequency',
+                   ylabel='Proteome Frequency',
                    extra_title_label='All UP Proteomes',
-                   output_plot=basedir+"/Plots/HistAllUP_proteins.png")
-
+                   xlim=3500,
+                   #ylim=10**4,
+                   fig_size=(10,6),
+                   output_plot=basedir+"/Plots/HistAllUP_proteins.png"
+                   )
 
 plot_histogram(data=df_up2,
                    x='complete_combined_score',
@@ -42,9 +67,13 @@ plot_histogram(data=df_up2,
                    alpha=0.5,
                    ylog=True,
                    xlabel='Busco',
-                   ylabel='Frequency',
+                   ylabel='Proteome Frequency',
                    extra_title_label='All UP Proteomes',
-                   output_plot=basedir+"/Plots/HistAllUP_BUSCO.png")
+                   xlim=3500,
+                   #ylim=10**4,
+                   fig_size=(10,6),
+                   #output_plot=basedir+"/Plots/HistAllUP_BUSCO.png"
+                   )
 
 plot_histogram(data=df_up2,
                    x='checkm-completeness',
@@ -56,9 +85,13 @@ plot_histogram(data=df_up2,
                    alpha=0.5,
                    ylog=True,
                    xlabel='CheckM',
-                   ylabel='Frequency',
+                   ylabel='Proteome Frequency',
                    extra_title_label='All UP Proteomes',
-                   output_plot=basedir+"/Plots/HistAllUP_CheckM.png")
+                   xlim=3500,
+                   #ylim=10**4,
+                   fig_size=(10,6),
+                   #output_plot=basedir+"/Plots/HistAllUP_CheckM.png"
+                   )
 
 
 ###############################################################################
@@ -221,3 +254,19 @@ plot_histogram(data=other_up,
                    ylabel='Frequency',
                    extra_title_label='Other UP Proteomes',
                    output_plot=basedir+"/Plots/HistOtherlUP_CheckM.png")
+
+
+###############################################################################
+plot_histogram(data=df_atb2,
+                   x='protein_count',
+                   #kde=True,
+                   #nbins=None,
+                   bin_method='rice',
+                   color='darkorange',
+                   label='T', 
+                   alpha=0.9,
+                   ylog=True,
+                   xlabel='Number of Proteins',
+                   ylabel='Frequency',
+                   extra_title_label='ATB Proteomes',
+                   output_plot=basedir+"/Plots/HistATB_proteins.png")
