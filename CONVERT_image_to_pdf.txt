@@ -1,0 +1,7 @@
+https://stackoverflow.com/questions/8955425/how-can-i-convert-a-series-of-images-to-a-pdf-from-the-command-line-on-linux
+
+
+img2pdf *.jpg -o out.pdf
+convert *.png -background white -alpha remove -alpha off output.png
+
+convert page*.png mydoc.pdf
