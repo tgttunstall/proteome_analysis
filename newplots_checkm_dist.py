@@ -11,6 +11,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+#FIXME: the bins thing for the data
 ###############################################################################
 homedir = os.path.expanduser("~")
 #basedir =  homedir + "/Documents/arise/spneumo_dataset"
