@@ -257,7 +257,7 @@ plot_histogram(data=other_up,
 
 
 ###############################################################################
-plot_histogram(data=df_atb2,
+plot_histogram(data=df_atb2, #atb_df
                    x='protein_count',
                    #kde=True,
                    #nbins=None,
@@ -269,4 +269,6 @@ plot_histogram(data=df_atb2,
                    xlabel='Number of Proteins',
                    ylabel='Frequency',
                    extra_title_label='ATB Proteomes',
-                   output_plot=basedir+"/Plots/HistATB_proteins.png")
+                   #output_plot=basedir+"/Plots/HistATB_proteins.png"
+                   )
+###############################################################################
